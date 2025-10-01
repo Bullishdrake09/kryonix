@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Kryonix Chat - {{ username }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="mobile-header" id="mobile-header">
+        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
+        <h2 id="mobile-chat-title">Kryonix Chat</h2> <span style="visibility: hidden;"><i class="fas fa-bars"></i></span>
+    </div>
+
+    <div class="app-container">
+        <div class="sidebar" id="sidebar">
+            <button class="close-button" id="close-sidebar-button"><i class="fas fa-times"></i></button>
+            <div class="user-info">
+                <div class="avatar">{{ current_user.username[0].upper() }}</div>
+                <div class="username">{{ username }}</div>
+            </div>
+            <nav>
+                <a href="{{ url_for('chat') }}">Chats</a>
+                <a href="{{ url_for('friends') }}">Friends</a>
+                <a href="{{ url_for('settings') }}">Settings</a>
+                {% if current_user.username == 'admin' %}
+                <a href="{{ url_for('admin_page') }}">Admin Panel</a>
+                {% endif %}
+            </nav>
+
+            <div class="friends-list">
+                <h3>Friends</h3>
+                <ul id="friend-list-ul">
+                    {% if not friends_list %}
+                    <p class="initial-chat-message">Select a friend to start chatting</p>
+                    {% endif %}
+                    {% for friend in friends_list %}
+                    <li data-friend-username="{{ friend }}">
+                        <div class="friend-avatar">{{ friend[0].upper() }}</div>
+                        <span>{{ friend }}</span>
+                    </li>
+                    {% else %}
+                    <li>No friends yet. Add some in the <a href="{{ url_for('friends') }}">Friends page</a>!</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+        </div>
+
+        <div class="chat-area">
+            <div id="status-overlay">
+                <p id="overlay-message"></p>
+                <button onclick="hideOverlay()">OK</button>
+            </div>
+
+            <div class="chat-header">
+                <h2 id="current-chat-header"></h2> <div class="header-links">
+                    <a href="{{ url_for('friends') }}">Manage Friends</a>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                {% if not friends_list %}
+                <p class="initial-chat-message">Add friends to start chatting!</p>
+                {% else %}
+                <p class="initial-chat-message" id="select-chat-prompt">Select a friend from the sidebar to start chatting.</p>
+                {% endif %}
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="message-input" placeholder="Type a message...">
+                <label for="file-input">
+                    <i class="fas fa-paperclip"></i>
+                </label>
+                <input type="file" id="file-input" accept="image/*,video/*">
+                <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const socket = io();
+    const username = "{{ username }}";
+    let currentRoom = null;
+    let isLoadingHistory = false;
+
+    const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeSidebarButton = document.getElementById('close-sidebar-button');
+    const chatMessagesDiv = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const currentChatHeader = document.getElementById('current-chat-header');
+    const friendListUl = document.getElementById('friend-list-ul');
+    const fileInput = document.getElementById('file-input');
+    const statusOverlay = document.getElementById('status-overlay');
+    const overlayMessage = document.getElementById('overlay-message');
+    const selectChatPrompt = document.getElementById('select-chat-prompt');
+
+    // Sidebar toggle functionality
+    menuToggle.addEventListener('click', () => {
+        sidebar.classList.add('active');
+    });
+
+    closeSidebarButton.addEventListener('click', () => {
+        sidebar.classList.remove('active');
+    });
+
+    // Friend click handler
+    friendListUl.addEventListener('click', (event) => {
+        let targetLi = event.target.closest('li');
+        if (targetLi && targetLi.dataset.friendUsername) {
+            const friendUsername = targetLi.dataset.friendUsername;
+            localStorage.setItem('activeFriend', friendUsername);
+            if (window.innerWidth < 768) {
+                sidebar.classList.remove('active');
+            }
+            selectFriend(friendUsername, targetLi);
+        }
+    });
+
+    function selectFriend(friendUsername, targetLi = null) {
+        const newRoomName = [username, friendUsername].sort().join('-');
+        if (currentRoom === newRoomName) return;
+
+        if (currentRoom) {
+            socket.emit('leave', { room: currentRoom });
+        }
+
+        currentRoom = newRoomName;
+        socket.emit('join', { room: currentRoom });
+        loadChatHistory(currentRoom);
+
+        Array.from(friendListUl.children).forEach(li => li.classList.remove('active'));
+        if (targetLi) {
+            targetLi.classList.add('active');
+        } else {
+            const matchingLi = friendListUl.querySelector(`li[data-friend-username="${friendUsername}"]`);
+            if (matchingLi) matchingLi.classList.add('active');
+        }
+
+        if (selectChatPrompt) {
+            selectChatPrompt.style.display = 'none';
+        }
+    }
+
+    function showOverlay(message) {
+        overlayMessage.textContent = message;
+        statusOverlay.classList.add('active');
+    }
+
+    function hideOverlay() {
+        statusOverlay.classList.remove('active');
+    }
+
+    function scrollToBottom() {
+        setTimeout(() => {
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }, 100);
+    }
+
+    function addMessage(msg) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message');
+        messageDiv.setAttribute('data-message-id', msg.id);
+
+        if (msg.username === username) {
+            messageDiv.classList.add('sent');
+        } else {
+            messageDiv.classList.add('received');
+        }
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.classList.add('message-avatar');
+        avatarDiv.textContent = msg.username[0].toUpperCase();
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('message-content');
+
+        const senderSpan = document.createElement('div');
+        senderSpan.classList.add('message-sender');
+        senderSpan.textContent = msg.username;
+
+        const textSpan = document.createElement('span');
+        textSpan.innerHTML = msg.msg;
+
+        const timeSpan = document.createElement('div');
+        timeSpan.classList.add('message-time');
+        timeSpan.textContent = msg.time;
+
+        if (msg.username !== username) {
+            contentDiv.appendChild(senderSpan);
+        }
+        contentDiv.appendChild(textSpan);
+        contentDiv.appendChild(timeSpan);
+
+        messageDiv.appendChild(avatarDiv);
+        messageDiv.appendChild(contentDiv);
+
+        if (msg.username === username && !msg.msg.includes("<em>deleted message</em>")) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.classList.add('message-actions');
+
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Edit';
+            editButton.onclick = () => startEditMessage(msg.id, msg.msg);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.onclick = () => deleteMessage(msg.id);
+
+            actionsDiv.appendChild(editButton);
+            actionsDiv.appendChild(deleteButton);
+            messageDiv.appendChild(actionsDiv);
+        }
+
+        chatMessagesDiv.appendChild(messageDiv);
+    }
+
+    function updateMessage(messageId, newText) {
+        const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
+        if (messageElement) {
+            const textSpan = messageElement.querySelector('.message-content span');
+            if (textSpan) {
+                textSpan.innerHTML = newText;
+                const actionsDiv = messageElement.querySelector('.message-actions');
+                if (actionsDiv) {
+                    if (newText.includes("<em>deleted message</em>")) {
+                        actionsDiv.style.display = 'none';
+                    } else {
+                        if (messageElement.classList.contains('sent')) {
+                            actionsDiv.style.display = '';
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    async function loadChatHistory(roomName) {
+        if (isLoadingHistory || currentRoom !== roomName) return;
+        isLoadingHistory = true;
+        chatMessagesDiv.innerHTML = '';
+        currentChatHeader.textContent = `${roomName.replace(username + '-', '').replace('-' + username, '')}`;
+
+        try {
+            const response = await fetch(`/history/${roomName}`);
+            const data = await response.json();
+
+            if (data.error) {
+                showOverlay(data.error);
+                currentRoom = null;
+                currentChatHeader.textContent = "Error loading chat.";
+                return;
+            }
+
+            data.messages.forEach(msg => addMessage(msg));
+            scrollToBottom();
+        } catch (error) {
+            console.error("Error loading chat history:", error);
+            showOverlay("Failed to load chat history. Please try again.");
+            currentRoom = null;
+            currentChatHeader.textContent = "Error loading chat.";
+        } finally {
+            isLoadingHistory = false;
+        }
+    }
+
+    // ✅ UPDATED: Keep focus after sending to keep keyboard open
+    sendButton.addEventListener('click', () => {
+        const messageText = messageInput.value.trim();
+        if (messageText && currentRoom) {
+            socket.emit('send_message', {
+                username: username,
+                room: currentRoom,
+                msg: messageText
+            });
+            messageInput.value = '';
+            messageInput.focus(); // 👈 Keeps keyboard open!
+            setTimeout(scrollToBottom, 50);
+        } else if (!currentRoom) {
+            showOverlay("Please select a friend to chat with first.");
+        }
+    });
+
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendButton.click();
+        }
+    });
+
+    fileInput.addEventListener('change', async (event) => {
+        if (!currentRoom) {
+            showOverlay("Please select a friend to chat with first.");
+            fileInput.value = '';
+            return;
+        }
+
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/upload_file', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                showOverlay(`File upload failed: ${data.error}`);
+            } else if (data.url) {
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                let messageContent;
+
+                if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
+                    messageContent = `<a href="${data.url}" target="_blank"><img src="${data.url}" class="message-file image" alt="Uploaded Image"></a>`;
+                } else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
+                    messageContent = `<video controls src="${data.url}" class="message-file video"></video>`;
+                } else {
+                    messageContent = `<a href="${data.url}" target="_blank">Uploaded file: ${file.name}</a>`;
+                }
+
+                socket.emit('send_message', {
+                    username: username,
+                    room: currentRoom,
+                    msg: messageContent
+                });
+                messageInput.focus(); // Keep focus after file send too
+            }
+        } catch (error) {
+            console.error("Error uploading file:", error);
+            showOverlay("An error occurred during file upload.");
+        } finally {
+            fileInput.value = '';
+        }
+    });
+
+    function startEditMessage(messageId, currentMessageText) {
+        const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
+        if (!messageElement) return;
+
+        const textSpan = messageElement.querySelector('.message-content span');
+        if (!textSpan) return;
+
+        const existingInput = messageElement.querySelector('.message-edit-input');
+        if (existingInput) {
+            existingInput.remove();
+        }
+
+        const cleanText = currentMessageText.replace(/<em>\(edited\)<\/em>/, '').trim();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = cleanText;
+        input.classList.add('message-edit-input');
+        input.onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                confirmEditMessage(messageId, input.value, input);
+                e.preventDefault();
+            }
+        };
+        input.onblur = () => {
+            confirmEditMessage(messageId, input.value, input, true);
+        };
+
+        const actionsDiv = messageElement.querySelector('.message-actions');
+        if (actionsDiv) actionsDiv.style.display = 'none';
+
+        textSpan.replaceWith(input);
+        input.focus();
+        input.select();
+    }
+
+    function confirmEditMessage(messageId, newText, inputElement, onBlur = false) {
+        const originalText = inputElement.defaultValue;
+        const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
+        const textSpan = document.createElement('span');
+
+        if (newText.trim() === '' && !onBlur) {
+            showOverlay("Message cannot be empty.");
+            textSpan.innerHTML = originalText;
+            inputElement.replaceWith(textSpan);
+            const actionsDiv = messageElement.querySelector('.message-actions');
+            if (actionsDiv) actionsDiv.style.display = '';
+            return;
+        } else if (newText.trim() === '' || newText === originalText) {
+            textSpan.innerHTML = originalText;
+            inputElement.replaceWith(textSpan);
+            const actionsDiv = messageElement.querySelector('.message-actions');
+            if (actionsDiv) actionsDiv.style.display = '';
+            return;
+        }
+
+        socket.emit('edit_message', {
+            message_id: messageId,
+            new_text: newText,
+            room: currentRoom
+        });
+
+        textSpan.innerHTML = newText + ' <em>(edited)</em>';
+        inputElement.replaceWith(textSpan);
+        const actionsDiv = messageElement.querySelector('.message-actions');
+        if (actionsDiv) actionsDiv.style.display = '';
+    }
+
+    function deleteMessage(messageId) {
+        if (confirm("Are you sure you want to delete this message?")) {
+            socket.emit('delete_message', {
+                message_id: messageId,
+                room: currentRoom
+            });
+        }
+    }
+
+    socket.on('connect', () => {
+        console.log('Connected to Socket.IO');
+        const storedFriend = localStorage.getItem('activeFriend');
+        if (storedFriend) {
+            selectFriend(storedFriend);
+        } else {
+            const firstFriendLi = friendListUl.querySelector('li[data-friend-username]');
+            if (firstFriendLi) {
+                selectFriend(firstFriendLi.dataset.friendUsername, firstFriendLi);
+            } else {
+                currentChatHeader.textContent = "";
+                if (selectChatPrompt) {
+                    selectChatPrompt.style.display = 'block';
+                    selectChatPrompt.textContent = "Add friends to start chatting!";
+                }
+            }
+        }
+    });
+
+    socket.on('message', (data) => {
+        if (data.room === currentRoom) {
+            addMessage(data);
+            scrollToBottom();
+        }
+    });
+
+    socket.on('message_updated', (data) => {
+        if (data.room === currentRoom) {
+            const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
+                                        ? data.new_text
+                                        : `${data.new_text} <em>(edited)</em>`;
+            updateMessage(data.id, newTextWithEditedTag);
+            scrollToBottom();
+        }
+    });
+
+    socket.on('error', (data) => {
+        console.error('Socket Error:', data.message);
+        showOverlay(data.message);
+        if (data.message.includes('not friends') || data.message.includes('blocked') || data.message.includes('Unauthorized')) {
+            currentRoom = null;
+            chatMessagesDiv.innerHTML = '';
+            currentChatHeader.textContent = "";
+            if (selectChatPrompt) {
+                selectChatPrompt.style.display = 'block';
+                selectChatPrompt.textContent = "Select a friend from the sidebar to start chatting.";
+            }
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from Socket.IO');
+        showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
+    });
+
+
+
+    // Mobile input focus handling
+    const chatArea = document.querySelector('.chat-area');
+    let isAboutToSend = false;
+
+    function handleMobileFocus() {
+        if (window.innerWidth > 768) return;
+        chatArea.style.paddingBottom = '20vh';
+        setTimeout(() => {
+            messageInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 150);
+    }
+
+    function handleMobileBlur() {
+        if (window.innerWidth <= 768) {
+            // Wait for potential send action AND let transition play
+            setTimeout(() => {
+                if (!isAboutToSend) {
+                    chatArea.style.paddingBottom = '0'; // Explicitly set to 0
+                }
+                isAboutToSend = false;
+            }, 300); // Match or slightly exceed CSS transition duration
+        }
+    }
+
+    // Mark intent to send
+    sendButton.addEventListener('mousedown', () => isAboutToSend = true);
+    sendButton.addEventListener('touchstart', () => isAboutToSend = true);
+
+    // Attach events
+    messageInput.addEventListener('focus', handleMobileFocus);
+    messageInput.addEventListener('blur', handleMobileBlur);
+</script>
+</body>
+</html>

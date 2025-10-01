@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Add basic table styling for admin panel */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: var(--accent-color);
+        }
+        td form {
+            display: inline-flex; /* Use inline-flex for buttons in table cells */
+            gap: 5px;
+            flex-wrap: wrap; /* Allow wrapping of buttons if space is tight */
+            margin-bottom: 5px; /* Add some space between button groups */
+        }
+        td form button, td form a.button {
+            padding: 5px 10px;
+            font-size: 0.85em;
+            border-radius: 15px;
+            white-space: nowrap; /* Prevent button text from wrapping */
+            text-decoration: none; /* For anchor buttons */
+        }
+        .small-button.delete-button {
+            background-color: var(--danger-button-bg);
+        }
+        .small-button.delete-button:hover {
+            background-color: var(--danger-button-hover-bg);
+        }
+        .message-container {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .message-container.success {
+            background-color: #28a745;
+            color: white;
+        }
+        .message-container.error {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            tr {
+                border: 1px solid var(--border-color);
+                margin-bottom: 15px;
+                background-color: var(--background-light);
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            td {
+                border: none;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+            }
+            td:before {
+                position: absolute;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+                color: var(--accent-color);
+            }
+            td:nth-of-type(1):before { content: "ID"; }
+            td:nth-of-type(2):before { content: "Username"; }
+            td:nth-of-type(3):before { content: "Email"; }
+            td:nth-of-type(4):before { content: "Timeout Until"; }
+            td:nth-of-type(5):before { content: "Actions"; }
+        }
+        /* Specific styling for the back button in admin */
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .admin-header h2 {
+            margin: 0;
+            color: var(--accent-color);
+        }
+        .admin-header .back-button {
+            background-color: var(--button-bg);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+        .admin-header .back-button:hover {
+            background-color: var(--button-hover-bg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="admin-header">
+                <h2>Admin Panel</h2>
+                <a href="{{ url_for('chat') }}" class="back-button">&lt; Back to Chat</a>
+            </div>
+
+            {% if message %}
+            <div class="message-container {{ 'success' if message_type == 'success' else 'error' }}">
+                <p>{{ message }}</p>
+            </div>
+            {% endif %}
+
+            <div class="section">
+                <h3>Users</h3>
+                {% if users %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Timeout Until</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                                <tr>
+                                    <td>{{ loop.index }}</td> {# Using loop.index for simple ID #}
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.timeout_until and user.timeout_until > now %}
+                                            {{ user.timeout_until.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                            No Timeout
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('admin_page') }}" method="POST">
+                                            <input type="hidden" name="target_username" value="{{ user.username }}">
+                                            {% if not user.timeout_until or user.timeout_until <= now %}
+                                                <input type="hidden" name="action" value="timeout">
+                                                <input type="hidden" name="minutes" value="1">
+                                                <button type="submit" class="button small-button">Timeout 1m</button>
+                                                <input type="hidden" name="minutes" value="10">
+                                                <button type="submit" class="button small-button">Timeout 10m</button>
+                                                <input type="hidden" name="minutes" value="60">
+                                                <button type="submit" class="button small-button">Timeout 1h</button>
+                                            {% else %}
+                                                <input type="hidden" name="action" value="untimeout">
+                                                <button type="submit" class="button small-button">Untimeout</button>
+                                            {% endif %}
+                                        </form>
+                                        <form action="{{ url_for('admin_page') }}" method="POST">
+                                            <input type="hidden" name="target_username" value="{{ user.username }}">
+                                            <input type="hidden" name="action" value="ban_user">
+                                            <button type="submit" class="button small-button danger-button" onclick="return confirm('Are you sure you want to ban {{ user.username }}? This will ban their email from future registrations.');">Ban</button>
+                                        </form>
+                                        <form action="{{ url_for('admin_page') }}" method="POST">
+                                            <input type="hidden" name="target_username" value="{{ user.username }}">
+                                            <input type="hidden" name="action" value="change_password">
+                                            <input type="password" name="new_password" placeholder="New Pass" required style="width: 80px;">
+                                            <button type="submit" class="button small-button">Change Pass</button>
+                                        </form>
+                                        <form action="{{ url_for('admin_page') }}" method="POST">
+                                            <input type="hidden" name="target_username" value="{{ user.username }}">
+                                            <input type="hidden" name="action" value="delete_user">
+                                            <button type="submit" class="button small-button danger-button" onclick="return confirm('Are you sure you want to DELETE {{ user.username }}? This action is irreversible.');">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No users found.</p>
+                    {% endif %}
+                </div>
+
+                <div class="section">
+                    <h3>Banned Emails</h3>
+                    {% if banned_list %}
+                        <ul>
+                            {% for banned_email in banned_list %}
+                                <li>
+                                    <span>{{ banned_email }}</span>
+                                    <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;">
+                                        <input type="hidden" name="action" value="unban_email">
+                                        <input type="hidden" name="target_email" value="{{ banned_email }}">
+                                        <button type="submit" class="button small-button">Unban</button>
+                                    </form>
+                                </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No banned emails.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

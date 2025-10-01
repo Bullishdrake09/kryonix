@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My App{% endblock %}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Dynamic styles for theme colors */
+        :root {
+            --primary-color: {{ session.get('primary_color', '#0f0f0f') }};
+            --accent-color: {{ session.get('accent_color', '#ff3f81') }};
+        }
+    </style>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>
