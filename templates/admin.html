@@ -1,230 +1,195 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        /* Add basic table styling for admin panel */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        th, td {
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            text-align: left;
-            vertical-align: top;
-        }
-        th {
-            background-color: var(--primary-color);
-            color: var(--accent-color);
-        }
-        td form {
-            display: inline-flex; /* Use inline-flex for buttons in table cells */
-            gap: 5px;
-            flex-wrap: wrap; /* Allow wrapping of buttons if space is tight */
-            margin-bottom: 5px; /* Add some space between button groups */
-        }
-        td form button, td form a.button {
-            padding: 5px 10px;
-            font-size: 0.85em;
-            border-radius: 15px;
-            white-space: nowrap; /* Prevent button text from wrapping */
-            text-decoration: none; /* For anchor buttons */
-        }
-        .small-button.delete-button {
-            background-color: var(--danger-button-bg);
-        }
-        .small-button.delete-button:hover {
-            background-color: var(--danger-button-hover-bg);
-        }
-        .message-container {
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .message-container.success {
-            background-color: #28a745;
-            color: white;
-        }
-        .message-container.error {
-            background-color: #dc3545;
-            color: white;
-        }
+<!-- admin.html -->
+{% extends 'base.html' %}
 
-        /* Responsive adjustments */
-        @media (max-width: 767px) {
-            table, thead, tbody, th, td, tr {
-                display: block;
-            }
-            thead tr {
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
-            }
-            tr {
-                border: 1px solid var(--border-color);
-                margin-bottom: 15px;
-                background-color: var(--background-light);
-                border-radius: 8px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            }
-            td {
-                border: none;
-                border-bottom: 1px solid rgba(255,255,255,0.05);
-                position: relative;
-                padding-left: 50%;
-                text-align: right;
-            }
-            td:before {
-                position: absolute;
-                left: 6px;
-                width: 45%;
-                padding-right: 10px;
-                white-space: nowrap;
-                text-align: left;
-                font-weight: bold;
-                color: var(--accent-color);
-            }
-            td:nth-of-type(1):before { content: "ID"; }
-            td:nth-of-type(2):before { content: "Username"; }
-            td:nth-of-type(3):before { content: "Email"; }
-            td:nth-of-type(4):before { content: "Timeout Until"; }
-            td:nth-of-type(5):before { content: "Actions"; }
-        }
-        /* Specific styling for the back button in admin */
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
-        }
-        .admin-header h2 {
-            margin: 0;
-            color: var(--accent-color);
-        }
-        .admin-header .back-button {
-            background-color: var(--button-bg);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background-color 0.2s ease;
-        }
-        .admin-header .back-button:hover {
-            background-color: var(--button-hover-bg);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="main-content">
-            <div class="admin-header">
-                <h2>Admin Panel</h2>
-                <a href="{{ url_for('chat') }}" class="back-button">&lt; Back to Chat</a>
-            </div>
+{% block title %}Admin Panel - {{ current_user.username }}{% endblock %}
 
-            {% if message %}
-            <div class="message-container {{ 'success' if message_type == 'success' else 'error' }}">
-                <p>{{ message }}</p>
-            </div>
+{% block content %}
+<div class="container mobile-app-layout">
+    <div class="main-content mobile-panel">
+        <div class="mobile-page-header desktop-only-header">
+            <h3 class="page-title">Admin Panel</h3>
+        </div>
+        <div class="mobile-page-header" style="display: none;">
+            <a href="{{ url_for('chat') }}" class="back-button"> Back</a>
+            <h3 class="page-title">Admin Panel</h3>
+        </div>
+
+        {% if message %}
+            <div class="alert alert-{{ message_type }}">{{ message }}</div>
+        {% endif %}
+
+        <!-- Manage Users Section -->
+        <div class="section">
+            <h3>Manage Users</h3>
+            {% if users %}
+                <ul>
+                {% for user in users %}
+                    <li>
+                        <strong>{{ user.username }}</strong> ({{ user.email }}) 
+                        {% if user.is_timed_out %}
+                            <span style="color: var(--danger);">Timed out until {{ user.timeout_until.strftime('%Y-%m-%d %H:%M') }}</span>
+                        {% endif %}
+                        <div class="actions">
+                            <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete user {{ user.username }}? This cannot be undone.');">
+                                <input type="hidden" name="action" value="delete_user">
+                                <input type="hidden" name="target_username" value="{{ user.username }}">
+                                <button type="submit" class="button small-button danger-button">Delete</button>
+                            </form>
+                            <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="change_password">
+                                <input type="hidden" name="target_username" value="{{ user.username }}">
+                                <input type="password" name="new_password" placeholder="New Password" required style="width: 150px; margin: 0 5px;">
+                                <button type="submit" class="button small-button">Change Password</button>
+                            </form>
+                            {% if user.is_timed_out %}
+                                <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="untimeout">
+                                    <input type="hidden" name="target_username" value="{{ user.username }}">
+                                    <button type="submit" class="button small-button">Remove Timeout</button>
+                                </form>
+                            {% else %}
+                                <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="timeout">
+                                    <input type="hidden" name="target_username" value="{{ user.username }}">
+                                    <input type="number" name="minutes" placeholder="Minutes" required min="1" style="width: 80px; margin: 0 5px;">
+                                    <button type="submit" class="button small-button">Timeout</button>
+                                </form>
+                            {% endif %}
+                             <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to ban user {{ user.username }} (email: {{ user.email }})? This will prevent them from registering again with this email.');">
+                                <input type="hidden" name="action" value="ban_user">
+                                <input type="hidden" name="target_username" value="{{ user.username }}">
+                                <button type="submit" class="button small-button danger-button">Ban User</button>
+                            </form>
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>No users found.</p>
             {% endif %}
+        </div>
 
-            <div class="section">
-                <h3>Users</h3>
-                {% if users %}
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Timeout Until</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for user in users %}
-                                <tr>
-                                    <td>{{ loop.index }}</td> {# Using loop.index for simple ID #}
-                                    <td>{{ user.username }}</td>
-                                    <td>{{ user.email }}</td>
-                                    <td>
-                                        {% if user.timeout_until and user.timeout_until > now %}
-                                            {{ user.timeout_until.strftime('%Y-%m-%d %H:%M') }}
-                                        {% else %}
-                                            No Timeout
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <form action="{{ url_for('admin_page') }}" method="POST">
-                                            <input type="hidden" name="target_username" value="{{ user.username }}">
-                                            {% if not user.timeout_until or user.timeout_until <= now %}
-                                                <input type="hidden" name="action" value="timeout">
-                                                <input type="hidden" name="minutes" value="1">
-                                                <button type="submit" class="button small-button">Timeout 1m</button>
-                                                <input type="hidden" name="minutes" value="10">
-                                                <button type="submit" class="button small-button">Timeout 10m</button>
-                                                <input type="hidden" name="minutes" value="60">
-                                                <button type="submit" class="button small-button">Timeout 1h</button>
-                                            {% else %}
-                                                <input type="hidden" name="action" value="untimeout">
-                                                <button type="submit" class="button small-button">Untimeout</button>
-                                            {% endif %}
-                                        </form>
-                                        <form action="{{ url_for('admin_page') }}" method="POST">
-                                            <input type="hidden" name="target_username" value="{{ user.username }}">
-                                            <input type="hidden" name="action" value="ban_user">
-                                            <button type="submit" class="button small-button danger-button" onclick="return confirm('Are you sure you want to ban {{ user.username }}? This will ban their email from future registrations.');">Ban</button>
-                                        </form>
-                                        <form action="{{ url_for('admin_page') }}" method="POST">
-                                            <input type="hidden" name="target_username" value="{{ user.username }}">
-                                            <input type="hidden" name="action" value="change_password">
-                                            <input type="password" name="new_password" placeholder="New Pass" required style="width: 80px;">
-                                            <button type="submit" class="button small-button">Change Pass</button>
-                                        </form>
-                                        <form action="{{ url_for('admin_page') }}" method="POST">
-                                            <input type="hidden" name="target_username" value="{{ user.username }}">
-                                            <input type="hidden" name="action" value="delete_user">
-                                            <button type="submit" class="button small-button danger-button" onclick="return confirm('Are you sure you want to DELETE {{ user.username }}? This action is irreversible.');">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p>No users found.</p>
-                    {% endif %}
-                </div>
+        <!-- Manage Banned Emails Section -->
+        <div class="section">
+            <h3>Manage Banned Emails</h3>
+            {% if banned_list %}
+                <ul>
+                {% for email in banned_list %}
+                    <li>
+                        {{ email }}
+                        <div class="actions">
+                            <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="unban_email">
+                                <input type="hidden" name="target_email" value="{{ email }}">
+                                <button type="submit" class="button small-button">Unban</button>
+                            </form>
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>No emails are currently banned.</p>
+            {% endif %}
+        </div>
 
-                <div class="section">
-                    <h3>Banned Emails</h3>
-                    {% if banned_list %}
-                        <ul>
-                            {% for banned_email in banned_list %}
-                                <li>
-                                    <span>{{ banned_email }}</span>
-                                    <form action="{{ url_for('admin_page') }}" method="POST" style="display:inline;">
-                                        <input type="hidden" name="action" value="unban_email">
-                                        <input type="hidden" name="target_email" value="{{ banned_email }}">
-                                        <button type="submit" class="button small-button">Unban</button>
-                                    </form>
-                                </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No banned emails.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+        <!-- Back to Chat -->
+        <a href="{{ url_for('chat') }}" class="button">Back to Chat</a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const desktopHeader = document.querySelector('.desktop-only-header');
+        const mobileHeader = document.querySelector('.mobile-page-header');
+        const backButton = document.querySelector('.back-button');
+
+        function updateHeader() {
+            if (window.innerWidth <= 768) {
+                if (desktopHeader) {
+                    desktopHeader.style.display = 'none';
+                }
+                if (mobileHeader) {
+                    mobileHeader.style.display = 'flex';
+                }
+            } else {
+                if (desktopHeader) {
+                    desktopHeader.style.display = 'flex';
+                }
+                if (mobileHeader) {
+                    mobileHeader.style.display = 'none';
+                }
+            }
+        }
+
+        updateHeader();
+        window.addEventListener('resize', updateHeader);
+    });
+</script>
+
+<style>
+    body {
+        overflow-y: scroll; /* Always show vertical scrollbar */
+        height: 100vh;      /* Full viewport height */
+        overflow-x: auto;   /* Auto horizontal scrolling when needed */
+    }
+    .actions {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap; /* Allow buttons to wrap on small screens */
+    }
+    .actions form {
+        display: inline-block; /* Ensure forms are inline */
+        margin: 0; /* Remove default margins */
+    }
+    .actions input[type="password"],
+    .actions input[type="number"] {
+        padding: 4px 6px;
+        font-size: 0.9em;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--darker);
+        color: var(--light);
+    }
+    .small-button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        margin: 0 2px; /* Add small margin between buttons */
+    }
+    .danger-button {
+        background-color: var(--danger);
+        border-color: var(--danger);
+    }
+    .danger-button:hover {
+        background-color: #e54d4d; /* Slightly darker on hover */
+        border-color: #e54d4d;
+    }
+    /* Ensure list items are properly spaced */
+    .section ul li {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--light-gray);
+    }
+    .section ul li:last-child {
+        border-bottom: none;
+    }
+    /* Adjust actions container for smaller screens */
+    @media (max-width: 768px) {
+        .actions {
+            flex-direction: column; /* Stack actions vertically on small screens */
+            align-items: flex-start; /* Align items to the start */
+        }
+        .actions form {
+            width: 100%; /* Make forms full width inside list item */
+            margin-bottom: 4px; /* Add space between action rows */
+        }
+        .actions input[type="password"],
+        .actions input[type="number"] {
+            width: calc(100% - 100px); /* Adjust width to fit within container, accounting for button space */
+            margin: 2px 0; /* Adjust margins */
+        }
+        .small-button {
+            margin: 2px 4px; /* Adjust button margins */
+        }
+    }
+</style>
+{% endblock %}

@@ -1,117 +1,109 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Friends - {{ current_user.username }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-    body {
-        overflow-y: scroll; /* Always show vertical scrollbar */
-        height: 100vh;      /* Full viewport height */
-        overflow-x: auto;   /* Auto horizontal scrolling when needed */
-        }
-    </style>
-</head>
-<body>
-    <div class="container mobile-app-layout">
-        <div class="main-content mobile-panel">
-            <div class="mobile-page-header">
-                <a href="{{ url_for('chat') }}" class="back-button">&lt; Back</a>
-                <h3 class="page-title">Friends</h3>
-            </div>
+<!-- friends.html -->
+{% extends 'base.html' %} <!-- Add this line -->
 
-            {% if message %}
-            <div class="message-container {{ 'success' if message_type == 'success' else 'error' }}">
-                <p>{{ message }}</p>
-            </div>
-            {% endif %}
+{% block title %}Friends - {{ current_user.username }}{% endblock %} <!-- Optional: Override title block -->
 
-            <div class="section">
-                <h3>Send Friend Request</h3>
-                <form action="{{ url_for('friends') }}" method="POST">
-                    <input type="hidden" name="action" value="send_request">
-                    <input type="text" name="target_username" placeholder="Enter username" required>
-                    <button type="submit">Send Request</button>
-                </form>
-            </div>
+{% block content %} <!-- Wrap existing content -->
 
-            <div class="section">
-                <h3>Pending Requests ({{ user_data.requests|length }})</h3>
-                {% if user_data.requests %}
-                    <ul>
-                        {% for req_user in user_data.requests %}
-                            <li>
-                                <span>{{ req_user }}</span>
-                                <div class="actions">
-                                    <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                        <input type="hidden" name="action" value="accept_request">
-                                        <input type="hidden" name="target_username" value="{{ req_user }}">
-                                        <button type="submit" class="button small-button accept">Accept</button>
-                                    </form>
-                                    <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                        <input type="hidden" name="action" value="decline_request">
-                                        <input type="hidden" name="target_username" value="{{ req_user }}">
-                                        <button type="submit" class="button small-button decline danger-button">Decline</button>
-                                    </form>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No pending friend requests.</p>
-                {% endif %}
-            </div>
+<!-- Remove the old <html>, <head>, <body> tags and their content -->
+<div class="container mobile-app-layout">
+    <div class="main-content mobile-panel">
+        <div class="mobile-page-header">
+            <a href="{{ url_for('chat') }}" class="back-button">< Back</a>
+            <h3 class="page-title">Friends</h3>
+        </div>
 
-            <div class="section">
-                <h3>My Friends ({{ user_data.friends|length }})</h3>
-                {% if user_data.friends %}
-                    <ul>
-                        {% for friend_user in user_data.friends %}
-                            <li>
-                                <span>{{ friend_user }}</span>
-                                <div class="actions">
-                                    <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                        <input type="hidden" name="action" value="remove_friend">
-                                        <input type="hidden" name="target_username" value="{{ friend_user }}">
-                                        <button type="submit" class="button small-button remove danger-button">Remove</button>
-                                    </form>
-                                    <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                        <input type="hidden" name="action" value="block_user">
-                                        <input type="hidden" name="target_username" value="{{ friend_user }}">
-                                        <button type="submit" class="button small-button block danger-button">Block</button>
-                                    </form>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>You have no friends yet. Send a request!</p>
-                {% endif %}
-            </div>
+        {% if message %}
+        <div class="message-container {{ 'success' if message_type == 'success' else 'error' }}">
+            <p>{{ message }}</p>
+        </div>
+        {% endif %}
 
-            <div class="section">
-                <h3>Blocked Users ({{ user_data.blocked|length }})</h3>
-                {% if user_data.blocked %}
-                    <ul>
-                        {% for blocked_user in user_data.blocked %}
-                            <li>
-                                <span>{{ blocked_user }}</span>
-                                <div class="actions">
-                                    <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                        <input type="hidden" name="action" value="unblock_user">
-                                        <input type="hidden" name="target_username" value="{{ blocked_user }}">
-                                        <button type="submit" class="button small-button unblock">Unblock</button>
-                                    </form>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No users blocked.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+        <div class="section">
+            <h3>Send Friend Request</h3>
+            <form action="{{ url_for('friends') }}" method="POST">
+                <input type="hidden" name="action" value="send_request">
+                <input type="text" name="target_username" placeholder="Enter username" required>
+                <button type="submit">Send Request</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h3>Pending Requests ({{ user_data.requests|length }})</h3>
+            {% if user_data.requests %}
+                <ul>
+                    {% for req_user in user_data.requests %}
+                        <li>
+                            <span>{{ req_user }}</span>
+                            <div class="actions">
+                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="accept_request">
+                                    <input type="hidden" name="target_username" value="{{ req_user }}">
+                                    <button type="submit" class="button small-button accept">Accept</button>
+                                </form>
+                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="decline_request">
+                                    <input type="hidden" name="target_username" value="{{ req_user }}">
+                                    <button type="submit" class="button small-button decline danger-button">Decline</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No pending friend requests.</p>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h3>My Friends ({{ user_data.friends|length }})</h3>
+            {% if user_data.friends %}
+                <ul>
+                    {% for friend_user in user_data.friends %}
+                        <li>
+                            <span>{{ friend_user }}</span>
+                            <div class="actions">
+                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="remove_friend">
+                                    <input type="hidden" name="target_username" value="{{ friend_user }}">
+                                    <button type="submit" class="button small-button remove danger-button">Remove</button>
+                                </form>
+                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="block_user">
+                                    <input type="hidden" name="target_username" value="{{ friend_user }}">
+                                    <button type="submit" class="button small-button block danger-button">Block</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>You have no friends yet. Send a request!</p>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h3>Blocked Users ({{ user_data.blocked|length }})</h3>
+            {% if user_data.blocked %}
+                <ul>
+                    {% for blocked_user in user_data.blocked %}
+                        <li>
+                            <span>{{ blocked_user }}</span>
+                            <div class="actions">
+                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="unblock_user">
+                                    <input type="hidden" name="target_username" value="{{ blocked_user }}">
+                                    <button type="submit" class="button small-button unblock">Unblock</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No users blocked.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<!-- Remove the old closing </body> and </html> tags -->
+{% endblock %} <!-- End the content block -->

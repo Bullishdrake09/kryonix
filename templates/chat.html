@@ -1,82 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Kryonix Chat - {{ username }}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="mobile-header" id="mobile-header">
-        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
-        <h2 id="mobile-chat-title">Kryonix Chat</h2> <span style="visibility: hidden;"><i class="fas fa-bars"></i></span>
-    </div>
+{% extends "base.html" %}
 
-    <div class="app-container">
-        <div class="sidebar" id="sidebar">
-            <button class="close-button" id="close-sidebar-button"><i class="fas fa-times"></i></button>
-            <div class="user-info">
-                <div class="avatar">{{ current_user.username[0].upper() }}</div>
-                <div class="username">{{ username }}</div>
-            </div>
-            <nav>
-                <a href="{{ url_for('chat') }}">Chats</a>
-                <a href="{{ url_for('friends') }}">Friends</a>
-                <a href="{{ url_for('settings') }}">Settings</a>
-                {% if current_user.username == 'admin' %}
-                <a href="{{ url_for('admin_page') }}">Admin Panel</a>
-                {% endif %}
-            </nav>
+{% block title %}Kryonix Chat - {{ username }}{% endblock %}
 
-            <div class="friends-list">
-                <h3>Friends</h3>
-                <ul id="friend-list-ul">
-                    {% if not friends_list %}
-                    <p class="initial-chat-message">Select a friend to start chatting</p>
-                    {% endif %}
-                    {% for friend in friends_list %}
-                    <li data-friend-username="{{ friend }}">
-                        <div class="friend-avatar">{{ friend[0].upper() }}</div>
-                        <span>{{ friend }}</span>
-                    </li>
-                    {% else %}
-                    <li>No friends yet. Add some in the <a href="{{ url_for('friends') }}">Friends page</a>!</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+    /* Ensure mobile header shows on small screens */
+    @media (max-width: 768px) {
+        .mobile-header {
+            display: flex !important;
+        }
+    }
+</style>
+<div class="mobile-header" id="mobile-header">
+    <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
+    <h2 id="mobile-chat-title">Kryonix Chat</h2> <span style="visibility: hidden;"><i class="fas fa-bars"></i></span>
+</div>
+
+<div class="app-container">
+    <div class="sidebar" id="sidebar">
+        <button class="close-button" id="close-sidebar-button"><i class="fas fa-times"></i></button>
+        <div class="user-info">
+            <div class="avatar">{{ current_user.username[0].upper() }}</div>
+            <div class="username">{{ username }}</div>
         </div>
+        <nav>
+            <a href="{{ url_for('chat') }}">Chats</a>
+            <a href="{{ url_for('friends') }}">Friends</a>
+            <a href="{{ url_for('settings') }}">Settings</a>
+            {% if current_user.username == 'admin' %}
+            <a href="{{ url_for('admin_page') }}">Admin Panel</a>
+            {% endif %}
+        </nav>
 
-        <div class="chat-area">
-            <div id="status-overlay">
-                <p id="overlay-message"></p>
-                <button onclick="hideOverlay()">OK</button>
-            </div>
-
-            <div class="chat-header">
-                <h2 id="current-chat-header"></h2> <div class="header-links">
-                    <a href="{{ url_for('friends') }}">Manage Friends</a>
-                </div>
-            </div>
-            <div class="chat-messages" id="chat-messages">
+        <div class="friends-list">
+            <h3>Friends</h3>
+            <ul id="friend-list-ul">
                 {% if not friends_list %}
-                <p class="initial-chat-message">Add friends to start chatting!</p>
-                {% else %}
-                <p class="initial-chat-message" id="select-chat-prompt">Select a friend from the sidebar to start chatting.</p>
+                <p class="initial-chat-message">Select a friend to start chatting</p>
                 {% endif %}
-            </div>
-            <div class="chat-input-area">
-                <input type="text" id="message-input" placeholder="Type a message...">
-                <label for="file-input">
-                    <i class="fas fa-paperclip"></i>
-                </label>
-                <input type="file" id="file-input" accept="image/*,video/*">
-                <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+                {% for friend in friends_list %}
+                <li data-friend-username="{{ friend }}">
+                    <div class="friend-avatar">{{ friend[0].upper() }}</div>
+                    <span>{{ friend }}</span>
+                </li>
+                {% else %}
+                <li>No friends yet. Add some in the <a href="{{ url_for('friends') }}">Friends page</a>!</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+    </div>
+
+    <div class="chat-area">
+        <div id="status-overlay">
+            <p id="overlay-message"></p>
+            <button onclick="hideOverlay()">OK</button>
+        </div>
+
+        <div class="chat-header">
+            <h2 id="current-chat-header"></h2> <div class="header-links">
+                <a href="{{ url_for('friends') }}">Manage Friends</a>
             </div>
         </div>
+        <div class="chat-messages" id="chat-messages">
+            {% if not friends_list %}
+            <p class="initial-chat-message">Add friends to start chatting!</p>
+            {% else %}
+            <p class="initial-chat-message" id="select-chat-prompt">Select a friend from the sidebar to start chatting.</p>
+            {% endif %}
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="message-input" placeholder="Type a message...">
+            <label for="file-input">
+                <i class="fas fa-paperclip"></i>
+            </label>
+            <input type="file" id="file-input" accept="image/*,video/*">
+            <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+        </div>
     </div>
+</div>
 
 <script>
     const socket = io();
@@ -504,5 +507,4 @@
     messageInput.addEventListener('focus', handleMobileFocus);
     messageInput.addEventListener('blur', handleMobileBlur);
 </script>
-</body>
-</html>
+{% endblock %}
