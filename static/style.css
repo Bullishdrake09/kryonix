@@ -1277,3 +1277,447 @@ body.auth-page {
     0%, 60%, 100% { opacity: 0.6; }
     30% { opacity: 1; }
 }
+
+    @media (max-width: 768px) {
+        .mobile-header {
+            display: flex !important;
+        }
+    }
+    
+    /* Video Call Modal Styles */
+    .call-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .call-modal.active {
+        display: flex;
+    }
+    
+    .call-content {
+        width: 90%;
+        max-width: 1200px;
+        height: 80vh;
+        background: var(--darker);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    
+    .call-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    
+    .call-header h3 {
+        color: var(--light);
+        font-size: 1.25rem;
+    }
+    
+    .video-container {
+        flex: 1;
+        position: relative;
+        background: #000;
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    #remote-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+    
+    #local-video {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 200px;
+        height: 150px;
+        border-radius: 12px;
+        border: 2px solid var(--primary);
+        object-fit: cover;
+        background: #000;
+    }
+    
+    .call-controls {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 20px;
+    }
+    
+    .call-button {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        font-size: 1.5rem;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .call-button.end {
+        background: var(--danger);
+        color: white;
+    }
+    
+    .call-button.mute {
+        background: var(--light-gray);
+        color: white;
+    }
+    
+    .call-button.mute.active {
+        background: var(--danger);
+    }
+    
+    .call-button:hover {
+        transform: scale(1.1);
+    }
+    
+    /* Incoming Call Modal */
+    .incoming-call-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--darker);
+        padding: 32px;
+        border-radius: 16px;
+        border: 2px solid var(--primary);
+        z-index: 1001;
+        text-align: center;
+        min-width: 300px;
+    }
+    
+    .incoming-call-modal.active {
+        display: block;
+    }
+    
+    .incoming-call-modal h3 {
+        color: var(--light);
+        margin-bottom: 16px;
+        font-size: 1.5rem;
+    }
+    
+    .incoming-call-modal p {
+        color: var(--gray);
+        margin-bottom: 24px;
+    }
+    
+    .incoming-call-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+    }
+    
+    .incoming-call-actions button {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .answer-button {
+        background: var(--success);
+        color: var(--darker);
+    }
+    
+    .reject-button {
+        background: var(--danger);
+        color: white;
+    }
+    
+    .answer-button:hover,
+    .reject-button:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Call icons in header */
+    .call-icons {
+        display: flex;
+        gap: 12px;
+    }
+    
+    .call-icon-btn {
+        background: var(--primary);
+        color: var(--darker);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    .call-icon-btn:hover {
+        background: var(--primary-dark);
+        transform: scale(1.1);
+    }
+    
+    .call-icon-btn:disabled {
+        background: var(--gray);
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+    
+    /* Minimize/Maximize Call */
+    .minimize-call-btn {
+        position: absolute;
+        top: 24px;
+        right: 70px;
+        background: var(--light-gray);
+        color: var(--light);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        font-size: 1.2rem;
+    }
+    
+    .minimize-call-btn:hover {
+        background: var(--border);
+    }
+    
+    .call-modal.minimized {
+        width: 300px;
+        height: 250px;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        top: auto;
+        left: auto;
+    }
+    
+    .call-modal.minimized .call-content {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        padding: 12px;
+    }
+    
+    .call-modal.minimized .call-header {
+        margin-bottom: 8px;
+    }
+    
+    .call-modal.minimized .call-header h3 {
+        font-size: 1rem;
+    }
+    
+    .call-modal.minimized #call-status {
+        font-size: 0.85rem;
+    }
+    
+    .call-modal.minimized #remote-video {
+        border-radius: 8px;
+    }
+    
+    .call-modal.minimized #local-video {
+        width: 80px;
+        height: 60px;
+        bottom: 60px;
+        right: 10px;
+    }
+    
+    .call-modal.minimized .call-controls {
+        margin-top: 8px;
+        gap: 8px;
+    }
+    
+    .call-modal.minimized .call-button {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .call-modal.minimized .minimize-call-btn {
+        top: 12px;
+        right: 50px;
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
+    
+    /* Device Settings Modal */
+    .device-settings-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--darker);
+        padding: 24px;
+        border-radius: 16px;
+        border: 2px solid var(--border);
+        z-index: 1002;
+        min-width: 350px;
+        max-width: 500px;
+    }
+    
+    .device-settings-modal.active {
+        display: block;
+    }
+    
+    .device-settings-modal h3 {
+        color: var(--light);
+        margin-bottom: 20px;
+        font-size: 1.3rem;
+    }
+    
+    .device-setting {
+        margin-bottom: 16px;
+    }
+    
+    .device-setting label {
+        display: block;
+        color: var(--gray);
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .device-setting select {
+        width: 100%;
+        padding: 10px;
+        background: var(--light-gray);
+        color: var(--light);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+    
+    .device-setting select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .device-settings-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+    }
+    
+    .device-settings-actions button {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .save-settings-btn {
+        background: var(--primary);
+        color: var(--darker);
+    }
+    
+    .cancel-settings-btn {
+        background: var(--light-gray);
+        color: var(--light);
+    }
+    
+    .save-settings-btn:hover,
+    .cancel-settings-btn:hover {
+        opacity: 0.8;
+    }
+    
+    /* Settings button in call */
+    .settings-call-btn {
+        position: absolute;
+        top: 24px;
+        right: 120px;
+        background: var(--light-gray);
+        color: var(--light);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        font-size: 1.1rem;
+    }
+    
+    .settings-call-btn:hover {
+        background: var(--border);
+    }
+    
+    .call-modal.minimized .settings-call-btn {
+        top: 12px;
+        right: 85px;
+        width: 30px;
+        height: 30px;
+        font-size: 0.9rem;
+    }
+    
+    /* Call system message */
+    .system-message {
+        text-align: center;
+        padding: 12px 20px;
+        margin: 12px auto;
+        background: rgba(76, 201, 240, 0.1);
+        border: 1px solid var(--primary);
+        border-radius: 20px;
+        color: var(--primary);
+        font-size: 0.9rem;
+        max-width: 80%;
+        font-style: italic;
+    }
+    
+    .system-message i {
+        margin-right: 8px;
+    }
+    
+    @media (max-width: 768px) {
+        #local-video {
+            width: 120px;
+            height: 90px;
+            bottom: 10px;
+            right: 10px;
+        }
+        
+        .call-content {
+            width: 95%;
+            height: 90vh;
+            padding: 16px;
+        }
+        
+        .call-button {
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+        }
+    }

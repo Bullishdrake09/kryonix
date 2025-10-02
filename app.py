@@ -2,7 +2,7 @@ import os
 import json
 import time
 import secrets
-from datetime import datetime, timedelta # Import timedelta for timeouts
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, session, abort, jsonify, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -13,23 +13,22 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'YOUR_VERY_SECRET_KEY' # !!! CHANGE THIS TO A STRONG, UNIQUE KEY !!!
+app.config['SECRET_KEY'] = 'YOUR_VERY_SECRET_KEY'
 app.config['USER_DATA_FILE'] = 'users.json'
-app.config['BANNED_EMAILS_FILE'] = 'banned_emails.json' # New file for banned emails
-app.config['UPLOAD_FOLDER'] = 'uploads' # Folder to store uploaded files (for chat media)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
+app.config['BANNED_EMAILS_FILE'] = 'banned_emails.json'
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Create upload folder if it doesn't exist
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Redirect to 'login' route if not authenticated
+login_manager.login_view = 'login'
 
-# Track user SIDs for status updates
-user_sids = {}  # {username: [socket_ids]}
+user_sids = {}
+active_calls = {}  # Track active calls: {room: {caller: sid, receiver: sid, type: 'audio'/'video'}}
 
 def generate_csrf_token():
     if 'csrf_token' not in session:
@@ -41,22 +40,20 @@ app.jinja_env.globals['csrf_token'] = generate_csrf_token
 # --- User Management (Flask-Login) ---
 class User(UserMixin):
     def __init__(self, id, username, email, password_hash, friends=None, requests=None, blocked=None, chat_history=None, settings=None, timeout_until=None, status='offline', last_seen=None):
-        self.id = id # This is the username in our case
+        self.id = id
         self.username = username
         self.email = email
         self.password_hash = password_hash
         self.friends = friends if friends is not None else []
-        self.requests = requests if requests is not None else [] # Incoming requests
-        self.blocked = blocked if blocked is not None else [] # Users blocked by this user
-        self.chat_history = chat_history if chat_history is not None else {} # {room_name: [{msg_obj}]}
+        self.requests = requests if requests is not None else []
+        self.blocked = blocked if blocked is not None else []
+        self.chat_history = chat_history if chat_history is not None else {}
         self.settings = settings if settings is not None else {'primary_color': '#0f0f0f', 'accent_color': '#ff3f81'}
-        # For timeout functionality: store as string (ISO format) for JSON serialization
         self.timeout_until = datetime.fromisoformat(timeout_until) if timeout_until else None
-        self.status = status  # 'online', 'offline', 'away', 'busy', 'typing'
+        self.status = status
         self.last_seen = datetime.fromisoformat(last_seen) if last_seen else datetime.now()
 
     def to_dict(self):
-        """Convert user object to dictionary for JSON serialization"""
         return {
             'username': self.username,
             'email': self.email,
@@ -90,8 +87,8 @@ class User(UserMixin):
                 user_data.get('chat_history'), 
                 user_data.get('settings'),
                 user_data.get('timeout_until'),
-                user_data.get('status', 'offline'),  # New status field
-                user_data.get('last_seen')  # New last_seen field
+                user_data.get('status', 'offline'),
+                user_data.get('last_seen')
             )
         return None
 
@@ -101,7 +98,6 @@ def load_user(user_id):
 
 # --- Data Persistence Functions ---
 def load_all_users_data():
-    """Loads all user data from the JSON file."""
     if not os.path.exists(app.config['USER_DATA_FILE']):
         return {}
     with open(app.config['USER_DATA_FILE'], 'r') as f:
@@ -112,19 +108,15 @@ def load_all_users_data():
             return {}
 
 def save_all_users_data(all_users_data):
-    """Saves all user data to the JSON file."""
     with open(app.config['USER_DATA_FILE'], 'w') as f:
         json.dump(all_users_data, f, indent=4)
 
 def load_user_data(username):
-    """Loads a single user's data."""
     all_users = load_all_users_data()
     return all_users.get(username)
 
 def save_user_data(user_data_dict):
-    """Saves a single user's data (updates the overall dict)."""
     all_users = load_all_users_data()
-    # Ensure status exists in user data
     if 'status' not in user_data_dict:
         user_data_dict['status'] = 'offline'
     if 'last_seen' not in user_data_dict:
@@ -133,7 +125,6 @@ def save_user_data(user_data_dict):
     save_all_users_data(all_users)
 
 def get_user_by_username_or_email(login_field):
-    """Finds a user by username or email."""
     all_users = load_all_users_data()
     for username, data in all_users.items():
         if username == login_field or data['email'] == login_field:
@@ -148,9 +139,8 @@ def get_user_by_username_or_email(login_field):
 
 def add_message_to_history(room, message_data):
     all_users = load_all_users_data()
-    user1, user2 = room.split('-') # Room format: user1-user2
+    user1, user2 = room.split('-')
     
-    # Update history for user1
     if user1 in all_users:
         if 'chat_history' not in all_users[user1]:
             all_users[user1]['chat_history'] = {}
@@ -158,7 +148,6 @@ def add_message_to_history(room, message_data):
             all_users[user1]['chat_history'][room] = []
         all_users[user1]['chat_history'][room].append(message_data)
 
-    # Update history for user2
     if user2 in all_users:
         if 'chat_history' not in all_users[user2]:
             all_users[user2]['chat_history'] = {}
@@ -180,7 +169,6 @@ def update_message_in_history(room, message_id, new_text):
                     break
     save_all_users_data(all_users)
 
-
 def delete_message_from_history(room, message_id):
     all_users = load_all_users_data()
     user1, user2 = room.split('-')
@@ -189,7 +177,7 @@ def delete_message_from_history(room, message_id):
         if user_key in all_users and 'chat_history' in all_users[user_key] and room in all_users[user_key]['chat_history']:
             for msg in all_users[user_key]['chat_history'][room]:
                 if msg.get('id') == message_id:
-                    msg['msg'] = "<em>deleted message</em>" # Mark as deleted
+                    msg['msg'] = "<em>deleted message</em>"
                     break
     save_all_users_data(all_users)
 
@@ -200,7 +188,6 @@ def get_room_history(room_name):
     return []
 
 def update_user_status(username, status):
-    """Update user status"""
     user_data = load_user_data(username)
     if user_data:
         user_data['status'] = status
@@ -210,14 +197,12 @@ def update_user_status(username, status):
     return False
 
 def get_user_status(username):
-    """Get user status"""
     user_data = load_user_data(username)
     if user_data:
         return user_data.get('status', 'offline'), user_data.get('last_seen')
     return 'offline', None
 
 def get_all_users_statuses():
-    """Get all users' statuses"""
     all_users = load_all_users_data()
     statuses = {}
     for username, data in all_users.items():
@@ -227,7 +212,6 @@ def get_all_users_statuses():
         }
     return statuses
 
-# --- Banned Emails Management ---
 def load_banned_emails():
     if not os.path.exists(app.config['BANNED_EMAILS_FILE']):
         return []
@@ -247,7 +231,6 @@ def is_email_banned(email):
     return email in banned_list
 
 # --- Routes ---
-
 @app.route('/')
 def index():
     return redirect(url_for('login'))
@@ -303,10 +286,10 @@ def register():
             'requests': [],
             'blocked': [],
             'chat_history': {},
-            'settings': {'primary_color': '#0f0f0f', 'accent_color': '#ff3f81'}, # Default theme
-            'timeout_until': None, # New field for timeouts
-            'status': 'offline', # New status field
-            'last_seen': datetime.now().isoformat() # New last_seen field
+            'settings': {'primary_color': '#0f0f0f', 'accent_color': '#ff3f81'},
+            'timeout_until': None,
+            'status': 'offline',
+            'last_seen': datetime.now().isoformat()
         }
         all_users[username] = new_user_data
         save_all_users_data(all_users)
@@ -315,7 +298,6 @@ def register():
         return redirect(url_for('login'))
 
     return render_template('register.html')
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -332,19 +314,17 @@ def login():
             flash('Invalid username/email or password.', 'error')
             return render_template('login.html', error='Invalid username/email or password.')
         
-        # Check if user is banned by email
         if is_email_banned(user.email):
             flash('Your account is banned.', 'error')
-            logout_user() # Ensure they are logged out if somehow they got here
+            logout_user()
             return render_template('login.html', error='Your account is banned.')
 
-        # Check if user is currently timed out
         if user.is_timed_out:
             flash(f'Your account is temporarily timed out until {user.timeout_until.strftime("%Y-%m-%d %H:%M")}.', 'warning')
             return render_template('login.html', error='Account timed out.')
 
         login_user(user)
-        update_user_status(user.username, 'online')  # Update status to online
+        update_user_status(user.username, 'online')
         flash('Logged in successfully!', 'success')
         return redirect(url_for('chat'))
 
@@ -353,7 +333,7 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
-    update_user_status(current_user.username, 'offline')  # Update status to offline
+    update_user_status(current_user.username, 'offline')
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
@@ -361,7 +341,6 @@ def logout():
 @app.route('/chat')
 @login_required
 def chat():
-    # If user is timed out, log them out and redirect to login
     if current_user.is_timed_out:
         flash(f'Your account is temporarily timed out until {current_user.timeout_until.strftime("%Y-%m-%d %H:%M")}.', 'warning')
         logout_user()
@@ -389,7 +368,6 @@ def history(room_name):
     current_user_data = load_user_data(current_user.username)
     target_username = user2 if current_user.username == user1 else user1
 
-    # Check friend status or if current user is blocked by target
     if target_username not in current_user_data.get('friends', []):
         target_user_data = load_user_data(target_username)
         if target_user_data and current_user.username in target_user_data.get('blocked', []):
@@ -547,13 +525,12 @@ def friends():
                     message_type = "error"
                     app.logger.error(f"Error in friends route for user {username}: {e}")
 
-    user_data = load_user_data(username) # Reload user data after any potential modifications
+    user_data = load_user_data(username)
     return render_template('friends.html', 
                            current_user=current_user, 
                            user_data=user_data, 
                            message=message, 
                            message_type=message_type)
-
 
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
@@ -588,19 +565,18 @@ def settings():
                            message=message,
                            message_type=message_type)
 
-@app.route('/admin', methods=['GET', 'POST']) # Changed route to /admin
+@app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin_page():
     if current_user.username != 'admin':
-        abort(403) # Forbidden for non-admin users
+        abort(403)
 
     all_users_data = load_all_users_data()
     banned_emails = load_banned_emails()
     
-    # Convert raw user data to User objects to leverage .is_timed_out and .timeout_until
     users_for_template = []
     for username, data in all_users_data.items():
-        if username != 'admin': # Don't list admin for management actions on self
+        if username != 'admin':
             users_for_template.append(User(username, username, data['email'], 
                                            data['password'], data.get('friends'), 
                                            data.get('requests'), data.get('blocked'), 
@@ -614,8 +590,8 @@ def admin_page():
 
     if request.method == 'POST':
         action = request.form.get('action')
-        target_username = request.form.get('target_username') # For user actions
-        target_email = request.form.get('target_email') # For ban/unban email
+        target_username = request.form.get('target_username')
+        target_email = request.form.get('target_email')
 
         if action in ['delete_user', 'change_password', 'timeout', 'untimeout', 'ban_user']:
             if not target_username or target_username not in all_users_data:
@@ -629,7 +605,6 @@ def admin_page():
                     if action == 'delete_user':
                         user_to_delete_data = all_users_data.get(target_username)
                         if user_to_delete_data:
-                            # Clean up references to target_username from other users' lists
                             for username_key, data in all_users_data.items():
                                 if username_key != target_username: 
                                     if target_username in data.get('friends', []):
@@ -678,9 +653,6 @@ def admin_page():
                         if user_to_ban and user_to_ban['email'] not in banned_emails:
                             banned_emails.append(user_to_ban['email'])
                             save_banned_emails(banned_emails)
-                            # Optionally delete the user as well upon banning
-                            # del all_users_data[target_username] 
-                            # save_all_users_data(all_users_data)
                             message = f"User '{target_username}' (email: {user_to_ban['email']}) banned."
                             message_type = "success"
                         else:
@@ -692,7 +664,7 @@ def admin_page():
                     message_type = "error"
                     app.logger.error(f"Admin action error: {e}")
 
-        elif action == 'unban_email': # Separate action for unbanning by email
+        elif action == 'unban_email':
             if target_email and target_email in banned_emails:
                 banned_emails.remove(target_email)
                 save_banned_emails(banned_emails)
@@ -705,7 +677,6 @@ def admin_page():
             message = "Invalid admin action."
             message_type = "error"
     
-    # Reload data for template after any POST action
     all_users_data = load_all_users_data()
     banned_emails = load_banned_emails()
     users_for_template = []
@@ -721,13 +692,12 @@ def admin_page():
 
     return render_template('admin.html', 
                            current_user=current_user, 
-                           users=users_for_template, # Pass User objects
-                           banned_list=banned_emails, # Pass raw banned emails
-                           now=datetime.now(), # Pass current time for comparison in template
+                           users=users_for_template,
+                           banned_list=banned_emails,
+                           now=datetime.now(),
                            message=message, 
                            message_type=message_type,
-                           show_login=False) # Always false, since Flask-Login handles it
-
+                           show_login=False)
 
 # --- SocketIO Events ---
 @socketio.on('connect')
@@ -747,10 +717,8 @@ def handle_disconnect():
                 user_sids[username].remove(request.sid)
             if not user_sids[username]:
                 del user_sids[username]
-                # User is completely disconnected, update status to offline
                 update_user_status(username, 'offline')
                 
-                # Notify friends that user is offline
                 user_data = load_user_data(username)
                 for friend_username in user_data.get('friends', []):
                     if friend_username in user_sids:
@@ -794,10 +762,8 @@ def on_join(data):
     join_room(room)
     app.logger.info(f'User {username} joined room: {room}')
     
-    # Update user status to online when they join a chat
     update_user_status(username, 'online')
     
-    # Notify friends that user is online
     for friend_username in user_data.get('friends', []):
         if friend_username in user_sids:
             for friend_sid in user_sids[friend_username]:
@@ -805,7 +771,6 @@ def on_join(data):
                     'username': username,
                     'status': 'online'
                 }, room=friend_sid)
-
 
 @socketio.on('leave')
 def on_leave(data):
@@ -908,7 +873,6 @@ def handle_user_connected():
     
     update_user_status(username, 'online')
     
-    # Notify friends that user is online
     user_data = load_user_data(username)
     for friend_username in user_data.get('friends', []):
         if friend_username in user_sids:
@@ -923,7 +887,6 @@ def handle_user_disconnected():
     username = current_user.username
     update_user_status(username, 'offline')
     
-    # Notify friends that user is offline
     user_data = load_user_data(username)
     for friend_username in user_data.get('friends', []):
         if friend_username in user_sids:
@@ -961,20 +924,151 @@ def handle_typing_stop(data):
 
 @socketio.on('request_statuses')
 def handle_request_statuses():
-    """Send all users' statuses to the connected user"""
     all_statuses = get_all_users_statuses()
-    # Only send statuses of friends
     user_data = load_user_data(current_user.username)
     friends = user_data.get('friends', [])
     friend_statuses = {k: v for k, v in all_statuses.items() if k in friends}
     emit('all_statuses', friend_statuses)
 
+# --- Video/Audio Call Events ---
+@socketio.on('call_user')
+def handle_call_user(data):
+    caller = current_user.username
+    receiver = data['receiver']
+    call_type = data['type']  # 'video' or 'audio'
+    room = data['room']
+    
+    if current_user.is_timed_out:
+        emit('error', {'message': 'You are timed out and cannot make calls.'}, room=request.sid)
+        return
+    
+    # Check if users are friends
+    user_data = load_user_data(caller)
+    if receiver not in user_data.get('friends', []):
+        emit('error', {'message': 'You can only call friends.'}, room=request.sid)
+        return
+    
+    # Check if receiver is online
+    if receiver not in user_sids:
+        emit('error', {'message': f'{receiver} is not online.'}, room=request.sid)
+        return
+    
+    # Check if there's already an active call in this room
+    if room in active_calls:
+        emit('error', {'message': 'There is already an active call.'}, room=request.sid)
+        return
+    
+    # Notify receiver of incoming call
+    for receiver_sid in user_sids[receiver]:
+        emit('incoming_call', {
+            'caller': caller,
+            'room': room,
+            'type': call_type
+        }, room=receiver_sid)
+    
+    app.logger.info(f'{caller} is calling {receiver} ({call_type})')
+
+@socketio.on('answer_call')
+def handle_answer_call(data):
+    answerer = current_user.username
+    caller = data['caller']
+    room = data['room']
+    call_type = data['type']
+    
+    # Create active call record
+    active_calls[room] = {
+        'caller': caller,
+        'receiver': answerer,
+        'type': call_type
+    }
+    
+    # Notify caller that call was answered
+    if caller in user_sids:
+        for caller_sid in user_sids[caller]:
+            emit('call_answered', {
+                'answerer': answerer,
+                'room': room
+            }, room=caller_sid)
+    
+    app.logger.info(f'{answerer} answered call from {caller}')
+
+@socketio.on('reject_call')
+def handle_reject_call(data):
+    rejecter = current_user.username
+    caller = data['caller']
+    room = data['room']
+    
+    # Notify caller that call was rejected
+    if caller in user_sids:
+        for caller_sid in user_sids[caller]:
+            emit('call_rejected', {
+                'rejecter': rejecter,
+                'room': room
+            }, room=caller_sid)
+    
+    app.logger.info(f'{rejecter} rejected call from {caller}')
+
+@socketio.on('end_call')
+def handle_end_call(data):
+    username = current_user.username
+    room = data['room']
+    
+    # Remove from active calls
+    if room in active_calls:
+        call_info = active_calls[room]
+        del active_calls[room]
+        
+        # Notify the other user
+        other_user = call_info['caller'] if call_info['receiver'] == username else call_info['receiver']
+        if other_user in user_sids:
+            for other_sid in user_sids[other_user]:
+                emit('call_ended', {
+                    'room': room,
+                    'ended_by': username
+                }, room=other_sid)
+    
+    app.logger.info(f'{username} ended call in room {room}')
+
+@socketio.on('webrtc_offer')
+def handle_webrtc_offer(data):
+    sender = current_user.username
+    room = data['room']
+    offer = data['offer']
+    
+    # Forward offer to the other user in the room
+    emit('webrtc_offer', {
+        'offer': offer,
+        'sender': sender
+    }, room=room, include_self=False)
+
+@socketio.on('webrtc_answer')
+def handle_webrtc_answer(data):
+    sender = current_user.username
+    room = data['room']
+    answer = data['answer']
+    
+    # Forward answer to the other user in the room
+    emit('webrtc_answer', {
+        'answer': answer,
+        'sender': sender
+    }, room=room, include_self=False)
+
+@socketio.on('webrtc_ice_candidate')
+def handle_ice_candidate(data):
+    sender = current_user.username
+    room = data['room']
+    candidate = data['candidate']
+    
+    # Forward ICE candidate to the other user in the room
+    emit('webrtc_ice_candidate', {
+        'candidate': candidate,
+        'sender': sender
+    }, room=room, include_self=False)
 
 if __name__ == '__main__':
-    # Initialize admin user if not exists (for testing)
     all_users = load_all_users_data()
     if 'admin' not in all_users:
-        admin_password_hash = generate_password_hash('admin') # !!! CHANGE ADMIN PASSWORD FOR PRODUCTION !!!
+        admin_password_hash = generate_password_hash('admin')
         admin_data = {
             'username': 'admin',
             'email': 'admin@example.com',
@@ -983,14 +1077,14 @@ if __name__ == '__main__':
             'requests': [],
             'blocked': [],
             'chat_history': {},
-            'settings': {'primary_color': '#ff3f81', 'accent_color': '#0f0f0f'}, # Admin can have a distinct theme
+            'settings': {'primary_color': '#ff3f81', 'accent_color': '#0f0f0f'},
             'timeout_until': None,
             'status': 'offline',
             'last_seen': datetime.now().isoformat()
         }
         all_users['admin'] = admin_data
         save_all_users_data(all_users)
-        print("Admin user created with username 'admin' and password 'adminpass'")
+        print("Admin user created with username 'admin' and password 'admin'")
         print("!!! IMPORTANT: Change admin password immediately in app.py for production !!!")
 
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True, host="0.0.0.0", port=5000)
