@@ -3,7 +3,7 @@
 {% block title %}Kryonix Chat - {{ username }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css  ">
 <style>
     /* Ensure mobile header shows on small screens */
     @media (max-width: 768px) {
@@ -41,7 +41,9 @@
                 {% endif %}
                 {% for friend in friends_list %}
                 <li data-friend-username="{{ friend }}">
-                    <div class="friend-avatar">{{ friend[0].upper() }}</div>
+                    <div class="friend-avatar">{{ friend[0].upper() }}
+                        <span class="status-indicator online" data-username="{{ friend }}"></span>
+                    </div>
                     <span>{{ friend }}</span>
                 </li>
                 {% else %}
@@ -86,6 +88,9 @@
     const username = "{{ username }}";
     let currentRoom = null;
     let isLoadingHistory = false;
+    let userStatus = 'offline';
+    let typingTimeout = null;
+    let connectedUsers = {}; // Track connected users
 
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menu-toggle');
@@ -281,6 +286,9 @@
             messageInput.value = '';
             messageInput.focus(); // 👈 Keeps keyboard open!
             setTimeout(scrollToBottom, 50);
+            
+            // Stop typing indicator immediately after sending
+            socket.emit('typing_stop', { room: currentRoom });
         } else if (!currentRoom) {
             showOverlay("Please select a friend to chat with first.");
         }
@@ -289,6 +297,21 @@
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendButton.click();
+        }
+    });
+
+    // Add typing indicator functionality
+    messageInput.addEventListener('input', () => {
+        if (currentRoom) {
+            socket.emit('typing_start', { room: currentRoom });
+            
+            // Clear existing timeout
+            clearTimeout(typingTimeout);
+            
+            // Set new timeout to stop typing indicator
+            typingTimeout = setTimeout(() => {
+                socket.emit('typing_stop', { room: currentRoom });
+            }, 1000); // Stop typing indicator after 1 second of inactivity
         }
     });
 
@@ -420,6 +443,15 @@
 
     socket.on('connect', () => {
         console.log('Connected to Socket.IO');
+        
+        // Set user as online
+        socket.emit('user_connected');
+        userStatus = 'online';
+        
+        // Request all users' statuses
+        socket.emit('request_statuses');
+        
+        // Load chat history and select friend
         const storedFriend = localStorage.getItem('activeFriend');
         if (storedFriend) {
             selectFriend(storedFriend);
@@ -470,10 +502,67 @@
 
     socket.on('disconnect', () => {
         console.log('Disconnected from Socket.IO');
+        socket.emit('user_disconnected');
         showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
     });
 
+    // Handle status updates from other users
+    socket.on('user_status_update', (data) => {
+        updateFriendStatus(data.username, data.status);
+    });
 
+    // Handle typing indicators
+    socket.on('user_typing', (data) => {
+        showTypingIndicator(data.username, data.is_typing);
+    });
+
+    // Handle request for statuses
+    socket.on('all_statuses', (data) => {
+        Object.keys(data).forEach(username => {
+            updateFriendStatus(username, data[username].status);
+        });
+    });
+
+    // Add functions for status management
+    function updateFriendStatus(username, status) {
+        const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator';
+            statusIndicator.classList.add(status);
+        }
+        
+        // Update the connected users tracking
+        connectedUsers[username] = status;
+    }
+
+    function showTypingIndicator(username, isTyping) {
+        const typingIndicator = document.getElementById('typing-indicator');
+        
+        if (isTyping) {
+            if (!typingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'typing-indicator';
+                indicator.innerHTML = `
+                    <span>${username}</span>
+                    <span>is typing</span>
+                    <span>...</span>
+                `;
+                chatMessagesDiv.appendChild(indicator);
+                scrollToBottom();
+            }
+        } else {
+            const existingIndicator = document.getElementById('typing-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+        }
+    }
+
+    // Add function to request all statuses
+    function requestAllStatuses() {
+        socket.emit('request_statuses');
+    }
 
     // Mobile input focus handling
     const chatArea = document.querySelector('.chat-area');

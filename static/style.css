@@ -1200,3 +1200,80 @@ body.auth-page {
     }
 }
 
+/* Status indicator styles */
+.status-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--darker);
+    transition: all 0.3s ease;
+}
+
+.status-indicator.online {
+    background-color: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.status-indicator.offline {
+    background-color: var(--gray);
+}
+
+.status-indicator.typing {
+    background-color: var(--primary);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.friend-avatar {
+    position: relative; /* Make sure parent has relative positioning */
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--secondary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    background: var(--light-gray);
+    border-radius: 18px;
+    margin: 8px 0;
+    font-size: 0.875rem;
+    color: var(--gray);
+}
+
+.typing-indicator span {
+    animation: typing 1.4s infinite;
+    opacity: 0.6;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% { opacity: 0.6; }
+    30% { opacity: 1; }
+}

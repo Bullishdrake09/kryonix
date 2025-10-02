@@ -1,0 +1,8 @@
+<style>
+    /* Ensure mobile header shows on small screens */
+    @media (max-width: 768px) {
+        .mobile-header {
+            display: flex !important;
+        }
+    }
+</style>
