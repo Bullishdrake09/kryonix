@@ -5,6 +5,119 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
+<style>
+/* Reply UI Styles */
+.reply-preview {
+    background: rgba(138, 43, 226, 0.15);
+    border-left: 3px solid #8a2be2;
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+}
+
+.reply-preview-content {
+    flex: 1;
+}
+
+.reply-preview-username {
+    color: #8a2be2;
+    font-size: 0.85em;
+    font-weight: 700;
+    margin-bottom: 2px;
+    text-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
+}
+
+.reply-preview-text {
+    color: #adb5bd;
+    font-size: 0.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 90%;
+}
+
+.reply-preview-close {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0;
+    margin-left: 8px;
+    transition: all 0.3s ease;
+}
+
+.reply-preview-close:hover {
+    color: #ff6b6b;
+    transform: scale(1.1);
+}
+
+.message-reply-context {
+    background: rgba(138, 43, 226, 0.1);
+    border-left: 3px solid #8a2be2;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(138, 43, 226, 0.2);
+}
+
+.message-reply-context:hover {
+    background: rgba(138, 43, 226, 0.2);
+    transform: translateX(3px);
+    border-color: rgba(138, 43, 226, 0.4);
+}
+
+.message-reply-username {
+    color: #8a2be2;
+    font-weight: 700;
+    margin-bottom: 2px;
+    text-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
+}
+
+.message-reply-text {
+    color: #adb5bd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.message.highlighted {
+    animation: highlight-pulse 1s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0%, 100% {
+        background: transparent;
+    }
+    50% {
+        background: rgba(138, 43, 226, 0.3);
+        box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+    }
+}
+
+.message-actions button.reply-btn {
+    background: linear-gradient(45deg, rgba(138, 43, 226, 0.2), rgba(75, 0, 130, 0.2));
+    color: #8a2be2;
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    transition: all 0.3s ease;
+}
+
+.message-actions button.reply-btn:hover {
+    background: linear-gradient(45deg, #8a2be2, #4b0082);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+}
+</style>
+
 <div class="mobile-header" id="mobile-header">
     <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
     <h2 id="mobile-chat-title">Kryonix Chat</h2>
@@ -67,6 +180,17 @@
                 </div>
                 <a href="{{ url_for('friends') }}">Manage Friends</a>
             </div>
+        </div>
+        
+        <!-- Reply Preview Bar -->
+        <div class="reply-preview" id="reply-preview" style="display: none;">
+            <div class="reply-preview-content">
+                <div class="reply-preview-username" id="reply-username"></div>
+                <div class="reply-preview-text" id="reply-text"></div>
+            </div>
+            <button class="reply-preview-close" id="cancel-reply">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         
         <div class="chat-messages" id="chat-messages">
@@ -157,7 +281,6 @@
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-    alert("Calling on mobile devices is not supported yet. Please use a desktop or laptop for calls.");
     const socket = io();
     const username = "{{ username }}";
     let currentRoom = null;
@@ -165,6 +288,8 @@
     let userStatus = 'offline';
     let typingTimeout = null;
     let connectedUsers = {};
+    let replyingTo = null; // Track message being replied to
+    
     // WebRTC variables
     let localStream = null;
     let remoteStream = null;
@@ -190,6 +315,13 @@
     const statusOverlay = document.getElementById('status-overlay');
     const overlayMessage = document.getElementById('overlay-message');
     const selectChatPrompt = document.getElementById('select-chat-prompt');
+    
+    // Reply elements
+    const replyPreview = document.getElementById('reply-preview');
+    const replyUsername = document.getElementById('reply-username');
+    const replyText = document.getElementById('reply-text');
+    const cancelReplyBtn = document.getElementById('cancel-reply');
+    
     // Call elements
     const callModal = document.getElementById('call-modal');
     const incomingCallModal = document.getElementById('incoming-call-modal');
@@ -221,6 +353,7 @@
         audioInput: null,
         videoInput: null
     };
+
     // Sidebar toggle functionality
     menuToggle.addEventListener('click', () => {
         sidebar.classList.add('active');
@@ -228,6 +361,7 @@
     closeSidebarButton.addEventListener('click', () => {
         sidebar.classList.remove('active');
     });
+
     // Friend click handler
     friendListUl.addEventListener('click', (event) => {
         let targetLi = event.target.closest('li');
@@ -240,6 +374,7 @@
             selectFriend(friendUsername, targetLi);
         }
     });
+
     function selectFriend(friendUsername, targetLi = null) {
         const newRoomName = [username, friendUsername].sort().join('-');
         if (currentRoom === newRoomName) return;
@@ -259,21 +394,42 @@
         if (selectChatPrompt) {
             selectChatPrompt.style.display = 'none';
         }
-        // Show call buttons when a friend is selected
         callIcons.style.display = 'flex';
+        cancelReply(); // Clear any active reply
     }
+
     function showOverlay(message) {
         overlayMessage.textContent = message;
         statusOverlay.classList.add('active');
     }
+
     function hideOverlay() {
         statusOverlay.classList.remove('active');
     }
+
     function scrollToBottom() {
         setTimeout(() => {
             chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
         }, 100);
     }
+
+    function stripHtmlForPreview(html) {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        return div.textContent || div.innerText || '';
+    }
+
+    function scrollToMessage(messageId) {
+        const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
+        if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            messageElement.classList.add('highlighted');
+            setTimeout(() => {
+                messageElement.classList.remove('highlighted');
+            }, 1000);
+        }
+    }
+
     function addMessage(msg) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
@@ -283,41 +439,111 @@
         } else {
             messageDiv.classList.add('received');
         }
+
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('message-avatar');
         avatarDiv.textContent = msg.username[0].toUpperCase();
+
         const contentDiv = document.createElement('div');
         contentDiv.classList.add('message-content');
+
         const senderSpan = document.createElement('div');
         senderSpan.classList.add('message-sender');
         senderSpan.textContent = msg.username;
+
+        // Add reply context if present
+        if (msg.reply_to) {
+            const replyContext = document.createElement('div');
+            replyContext.classList.add('message-reply-context');
+            replyContext.onclick = () => scrollToMessage(msg.reply_to.id);
+            
+            const replyUserDiv = document.createElement('div');
+            replyUserDiv.classList.add('message-reply-username');
+            replyUserDiv.textContent = msg.reply_to.username;
+            
+            const replyTextDiv = document.createElement('div');
+            replyTextDiv.classList.add('message-reply-text');
+            replyTextDiv.textContent = stripHtmlForPreview(msg.reply_to.msg);
+            
+            replyContext.appendChild(replyUserDiv);
+            replyContext.appendChild(replyTextDiv);
+            contentDiv.appendChild(replyContext);
+        }
+
         const textSpan = document.createElement('span');
         textSpan.innerHTML = msg.msg;
+
         const timeSpan = document.createElement('div');
         timeSpan.classList.add('message-time');
         timeSpan.textContent = msg.time;
+
         if (msg.username !== username) {
             contentDiv.appendChild(senderSpan);
         }
         contentDiv.appendChild(textSpan);
         contentDiv.appendChild(timeSpan);
+
         messageDiv.appendChild(avatarDiv);
         messageDiv.appendChild(contentDiv);
+
         if (msg.username === username && !msg.msg.includes("<em>deleted message</em>")) {
             const actionsDiv = document.createElement('div');
             actionsDiv.classList.add('message-actions');
+
+            const replyButton = document.createElement('button');
+            replyButton.textContent = 'Reply';
+            replyButton.classList.add('reply-btn');
+            replyButton.onclick = () => startReply(msg.id, msg.username, msg.msg);
+
             const editButton = document.createElement('button');
             editButton.textContent = 'Edit';
             editButton.onclick = () => startEditMessage(msg.id, msg.msg);
+
             const deleteButton = document.createElement('button');
             deleteButton.textContent = 'Delete';
             deleteButton.onclick = () => deleteMessage(msg.id);
+
+            actionsDiv.appendChild(replyButton);
             actionsDiv.appendChild(editButton);
             actionsDiv.appendChild(deleteButton);
             messageDiv.appendChild(actionsDiv);
+        } else if (msg.username !== username && !msg.msg.includes("<em>deleted message</em>")) {
+            // Add reply button for received messages
+            const actionsDiv = document.createElement('div');
+            actionsDiv.classList.add('message-actions');
+
+            const replyButton = document.createElement('button');
+            replyButton.textContent = 'Reply';
+            replyButton.classList.add('reply-btn');
+            replyButton.onclick = () => startReply(msg.id, msg.username, msg.msg);
+
+            actionsDiv.appendChild(replyButton);
+            messageDiv.appendChild(actionsDiv);
         }
+
         chatMessagesDiv.appendChild(messageDiv);
     }
+
+    function startReply(messageId, messageUsername, messageText) {
+        replyingTo = {
+            id: messageId,
+            username: messageUsername,
+            msg: messageText
+        };
+        
+        replyUsername.textContent = messageUsername;
+        replyText.textContent = stripHtmlForPreview(messageText);
+        replyPreview.style.display = 'flex';
+        messageInput.focus();
+    }
+
+    function cancelReply() {
+        replyingTo = null;
+        replyPreview.style.display = 'none';
+    }
+
+    cancelReplyBtn.addEventListener('click', cancelReply);
+
     function updateMessage(messageId, newText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (messageElement) {
@@ -337,6 +563,7 @@
             }
         }
     }
+
     async function loadChatHistory(roomName) {
         if (isLoadingHistory || currentRoom !== roomName) return;
         isLoadingHistory = true;
@@ -364,27 +591,38 @@
             isLoadingHistory = false;
         }
     }
+
     sendButton.addEventListener('click', () => {
         const messageText = messageInput.value.trim();
         if (messageText && currentRoom) {
-            socket.emit('send_message', {
+            const messageData = {
                 username: username,
                 room: currentRoom,
                 msg: messageText
-            });
+            };
+            
+            // Add reply data if replying
+            if (replyingTo) {
+                messageData.reply_to = replyingTo;
+            }
+            
+            socket.emit('send_message', messageData);
             messageInput.value = '';
             messageInput.focus();
+            cancelReply();
             setTimeout(scrollToBottom, 50);
             socket.emit('typing_stop', { room: currentRoom });
         } else if (!currentRoom) {
             showOverlay("Please select a friend to chat with first.");
         }
     });
+
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendButton.click();
         }
     });
+
     messageInput.addEventListener('input', () => {
         if (currentRoom) {
             socket.emit('typing_start', { room: currentRoom });
@@ -394,6 +632,7 @@
             }, 1000);
         }
     });
+
     fileInput.addEventListener('change', async (event) => {
         if (!currentRoom) {
             showOverlay("Please select a friend to chat with first.");
@@ -422,12 +661,21 @@
                 } else {
                     messageContent = `<a href="${data.url}" target="_blank">Uploaded file: ${file.name}</a>`;
                 }
-                socket.emit('send_message', {
+                
+                const messageData = {
                     username: username,
                     room: currentRoom,
                     msg: messageContent
-                });
+                };
+                
+                // Add reply data if replying
+                if (replyingTo) {
+                    messageData.reply_to = replyingTo;
+                }
+                
+                socket.emit('send_message', messageData);
                 messageInput.focus();
+                cancelReply();
             }
         } catch (error) {
             console.error("Error uploading file:", error);
@@ -436,6 +684,7 @@
             fileInput.value = '';
         }
     });
+
     function startEditMessage(messageId, currentMessageText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (!messageElement) return;
@@ -465,6 +714,7 @@
         input.focus();
         input.select();
     }
+
     function confirmEditMessage(messageId, newText, inputElement, onBlur = false) {
         const originalText = inputElement.defaultValue;
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
@@ -493,6 +743,7 @@
         const actionsDiv = messageElement.querySelector('.message-actions');
         if (actionsDiv) actionsDiv.style.display = '';
     }
+
     function deleteMessage(messageId) {
         if (confirm("Are you sure you want to delete this message?")) {
             socket.emit('delete_message', {
@@ -501,13 +752,13 @@
             });
         }
     }
+
     // ===== VIDEO CALL FUNCTIONS =====
     async function loadAvailableDevices() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
             availableDevices.audioInputs = devices.filter(device => device.kind === 'audioinput');
             availableDevices.videoInputs = devices.filter(device => device.kind === 'videoinput');
-            // Populate microphone select
             microphoneSelect.innerHTML = '';
             availableDevices.audioInputs.forEach((device, index) => {
                 const option = document.createElement('option');
@@ -515,7 +766,6 @@
                 option.textContent = device.label || `Microphone ${index + 1}`;
                 microphoneSelect.appendChild(option);
             });
-            // Populate camera select
             cameraSelect.innerHTML = '';
             availableDevices.videoInputs.forEach((device, index) => {
                 const option = document.createElement('option');
@@ -523,7 +773,6 @@
                 option.textContent = device.label || `Camera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            // Set selected devices if available
             if (selectedDevices.audioInput) {
                 microphoneSelect.value = selectedDevices.audioInput;
             }
@@ -534,23 +783,21 @@
             console.error('Error loading devices:', error);
         }
     }
+
     async function switchMediaDevice(deviceType, deviceId) {
         if (!localStream) return;
         try {
             const constraints = {};
             if (deviceType === 'audio') {
                 constraints.audio = { deviceId: { exact: deviceId } };
-                // Stop old audio track
                 const oldAudioTrack = localStream.getAudioTracks()[0];
                 if (oldAudioTrack) {
                     oldAudioTrack.stop();
                     localStream.removeTrack(oldAudioTrack);
                 }
-                // Get new audio stream
                 const newStream = await navigator.mediaDevices.getUserMedia(constraints);
                 const newAudioTrack = newStream.getAudioTracks()[0];
                 localStream.addTrack(newAudioTrack);
-                // Replace track in peer connection
                 if (peerConnection) {
                     const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'audio');
                     if (sender) {
@@ -560,19 +807,15 @@
                 selectedDevices.audioInput = deviceId;
             } else if (deviceType === 'video') {
                 constraints.video = { deviceId: { exact: deviceId } };
-                // Stop old video track
                 const oldVideoTrack = localStream.getVideoTracks()[0];
                 if (oldVideoTrack) {
                     oldVideoTrack.stop();
                     localStream.removeTrack(oldVideoTrack);
                 }
-                // Get new video stream
                 const newStream = await navigator.mediaDevices.getUserMedia(constraints);
                 const newVideoTrack = newStream.getVideoTracks()[0];
                 localStream.addTrack(newVideoTrack);
-                // Update local video
                 localVideo.srcObject = localStream;
-                // Replace track in peer connection
                 if (peerConnection) {
                     const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
@@ -586,6 +829,7 @@
             showOverlay('Failed to switch device. Please try again.');
         }
     }
+
     function addSystemMessage(message, icon = 'phone') {
         const systemDiv = document.createElement('div');
         systemDiv.classList.add('system-message');
@@ -593,6 +837,7 @@
         chatMessagesDiv.appendChild(systemDiv);
         scrollToBottom();
     }
+
     function logCallToChat(callType, action, otherUser) {
         let message = '';
         const icon = callType === 'video' ? 'video' : 'phone';
@@ -604,7 +849,6 @@
             message = `Missed ${callType === 'video' ? 'video' : 'audio'} call from ${otherUser}`;
         }
         addSystemMessage(message, icon);
-        // Also save to history
         const messageId = `system_${Date.now()}`;
         const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         socket.emit('send_message', {
@@ -613,6 +857,7 @@
             msg: `<em>${message}</em>`
         });
     }
+
     async function startCall(callType) {
         if (!currentRoom) {
             showOverlay("Please select a friend to call.");
@@ -621,7 +866,6 @@
         const receiver = currentRoom.replace(username + '-', '').replace('-' + username, '');
         try {
             currentCallType = callType;
-            // Get user media with selected devices
             const constraints = {
                 audio: selectedDevices.audioInput 
                     ? { deviceId: { exact: selectedDevices.audioInput } }
@@ -633,10 +877,8 @@
                     : false
             };
             localStream = await navigator.mediaDevices.getUserMedia(constraints);
-            // Load available devices after getting permission
             await loadAvailableDevices();
             localVideo.srcObject = localStream;
-            // Show call modal
             callModal.classList.add('active');
             callStatus.textContent = 'Calling...';
             callTitle.textContent = callType === 'video' ? 'Video Call' : 'Audio Call';
@@ -644,7 +886,6 @@
                 localVideo.style.display = 'none';
                 muteVideoBtn.style.display = 'none';
             }
-            // Emit call event
             socket.emit('call_user', {
                 receiver: receiver,
                 type: callType,
@@ -657,6 +898,7 @@
             closeCall();
         }
     }
+
     async function answerCall() {
         if (!incomingCallData) return;
         try {
@@ -672,7 +914,6 @@
                     : false
             };
             localStream = await navigator.mediaDevices.getUserMedia(constraints);
-            // Load available devices after getting permission
             await loadAvailableDevices();
             localVideo.srcObject = localStream;
             incomingCallModal.classList.remove('active');
@@ -688,10 +929,8 @@
                 room: incomingCallData.room,
                 type: incomingCallData.type
             });
-            // Create peer connection
             await createPeerConnection();
             isCallActive = true;
-            // Log call started
             logCallToChat(incomingCallData.type, 'started', incomingCallData.caller);
         } catch (error) {
             console.error('Error answering call:', error);
@@ -699,6 +938,7 @@
             rejectCall();
         }
     }
+
     function rejectCall() {
         if (!incomingCallData) return;
         socket.emit('reject_call', {
@@ -706,10 +946,10 @@
             room: incomingCallData.room
         });
         incomingCallModal.classList.remove('active');
-        // Log missed call
         logCallToChat(incomingCallData.type, 'missed', incomingCallData.caller);
         incomingCallData = null;
     }
+
     function closeCall() {
         const wasActive = isCallActive;
         const callType = currentCallType;
@@ -717,27 +957,22 @@
         if (isCallActive && currentRoom) {
             socket.emit('end_call', { room: currentRoom });
         }
-        // Close peer connection
         if (peerConnection) {
             peerConnection.close();
             peerConnection = null;
         }
-        // Stop local stream
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
             localStream = null;
         }
-        // Clear videos
         localVideo.srcObject = null;
         remoteVideo.srcObject = null;
-        // Reset UI
         callModal.classList.remove('active');
         callModal.classList.remove('minimized');
         incomingCallModal.classList.remove('active');
         localVideo.style.display = 'block';
         muteVideoBtn.style.display = 'block';
         isCallMinimized = false;
-        // Log call ended
         if (wasActive && callType && otherUser) {
             logCallToChat(callType, 'ended', otherUser);
         }
@@ -745,20 +980,18 @@
         currentCallType = null;
         incomingCallData = null;
     }
+
     async function createPeerConnection() {
         peerConnection = new RTCPeerConnection(configuration);
-        // Add local stream tracks
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
-        // Handle incoming tracks
         peerConnection.ontrack = (event) => {
             if (event.streams && event.streams[0]) {
                 remoteVideo.srcObject = event.streams[0];
                 callStatus.textContent = 'Connected';
             }
         };
-        // Handle ICE candidates
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 socket.emit('webrtc_ice_candidate', {
@@ -767,7 +1000,6 @@
                 });
             }
         };
-        // Handle connection state
         peerConnection.onconnectionstatechange = () => {
             console.log('Connection state:', peerConnection.connectionState);
             if (peerConnection.connectionState === 'connected') {
@@ -778,6 +1010,7 @@
             }
         };
     }
+
     function toggleMuteAudio() {
         if (localStream) {
             const audioTrack = localStream.getAudioTracks()[0];
@@ -789,6 +1022,7 @@
             }
         }
     }
+
     function toggleMuteVideo() {
         if (localStream) {
             const videoTrack = localStream.getVideoTracks()[0];
@@ -800,6 +1034,7 @@
             }
         }
     }
+
     function toggleMinimizeCall() {
         isCallMinimized = !isCallMinimized;
         callModal.classList.toggle('minimized');
@@ -812,18 +1047,20 @@
             minimizeCallBtn.title = 'Minimize';
         }
     }
+
     function openDeviceSettings() {
         loadAvailableDevices();
         deviceSettingsModal.classList.add('active');
     }
+
     function closeDeviceSettings() {
         deviceSettingsModal.classList.remove('active');
     }
+
     async function saveDeviceSettings() {
         const selectedMic = microphoneSelect.value;
         const selectedCam = cameraSelect.value;
         if (isCallActive && localStream) {
-            // Switch devices during active call
             if (selectedMic && selectedMic !== selectedDevices.audioInput) {
                 await switchMediaDevice('audio', selectedMic);
             }
@@ -831,13 +1068,12 @@
                 await switchMediaDevice('video', selectedCam);
             }
         } else {
-            // Save for next call
             selectedDevices.audioInput = selectedMic;
             selectedDevices.videoInput = selectedCam;
         }
         closeDeviceSettings();
     }
-    // Call button event listeners
+
     audioCallBtn.addEventListener('click', () => startCall('audio'));
     videoCallBtn.addEventListener('click', () => startCall('video'));
     endCallBtn.addEventListener('click', closeCall);
@@ -849,12 +1085,12 @@
     settingsCallBtn.addEventListener('click', openDeviceSettings);
     saveSettingsBtn.addEventListener('click', saveDeviceSettings);
     cancelSettingsBtn.addEventListener('click', closeDeviceSettings);
-    // Allow clicking on minimized call to maximize
     callModal.addEventListener('click', (e) => {
         if (isCallMinimized && e.target === callModal) {
             toggleMinimizeCall();
         }
     });
+
     // ===== SOCKET EVENTS =====
     socket.on('connect', () => {
         console.log('Connected to Socket.IO');
@@ -877,12 +1113,14 @@
             }
         }
     });
+
     socket.on('message', (data) => {
         if (data.room === currentRoom) {
             addMessage(data);
             scrollToBottom();
         }
     });
+
     socket.on('message_updated', (data) => {
         if (data.room === currentRoom) {
             const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
@@ -892,6 +1130,7 @@
             scrollToBottom();
         }
     });
+
     socket.on('error', (data) => {
         console.error('Socket Error:', data.message);
         showOverlay(data.message);
@@ -906,54 +1145,57 @@
             }
         }
     });
+
     socket.on('disconnect', () => {
         console.log('Disconnected from Socket.IO');
         socket.emit('user_disconnected');
         showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
     });
+
     socket.on('user_status_update', (data) => {
         updateFriendStatus(data.username, data.status);
     });
+
     socket.on('user_typing', (data) => {
         showTypingIndicator(data.username, data.is_typing);
     });
+
     socket.on('all_statuses', (data) => {
         Object.keys(data).forEach(username => {
             updateFriendStatus(username, data[username].status);
         });
     });
-    // Video call socket events
+
     socket.on('incoming_call', (data) => {
         incomingCallData = data;
         document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
         document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
         incomingCallModal.classList.add('active');
-        // Play ringtone (optional - you can add audio element)
-        // const ringtone = new Audio('/static/ringtone.mp3');
-        // ringtone.play();
     });
+
     socket.on('call_answered', async (data) => {
         callStatus.textContent = 'Connecting...';
         await createPeerConnection();
-        // Create and send offer
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         socket.emit('webrtc_offer', {
             room: currentRoom,
             offer: offer
         });
-        // Log call started
         const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
         logCallToChat(currentCallType, 'started', otherUser);
     });
+
     socket.on('call_rejected', (data) => {
         showOverlay(`${data.rejecter} rejected your call.`);
         closeCall();
     });
+
     socket.on('call_ended', (data) => {
         showOverlay('Call ended.');
         closeCall();
     });
+
     socket.on('webrtc_offer', async (data) => {
         if (!peerConnection) {
             await createPeerConnection();
@@ -966,14 +1208,17 @@
             answer: answer
         });
     });
+
     socket.on('webrtc_answer', async (data) => {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
     });
+
     socket.on('webrtc_ice_candidate', async (data) => {
         if (peerConnection && data.candidate) {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     });
+
     function updateFriendStatus(username, status) {
         const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
         if (statusIndicator) {
@@ -982,6 +1227,7 @@
         }
         connectedUsers[username] = status;
     }
+
     function showTypingIndicator(username, isTyping) {
         const typingIndicator = document.getElementById('typing-indicator');
         if (isTyping) {
@@ -1004,7 +1250,7 @@
             }
         }
     }
-    // Mobile input focus handling
+
     const chatArea = document.querySelector('.chat-area');
     let isAboutToSend = false;
     function handleMobileFocus() {
@@ -1028,10 +1274,9 @@
     sendButton.addEventListener('touchstart', () => isAboutToSend = true);
     messageInput.addEventListener('focus', handleMobileFocus);
     messageInput.addEventListener('blur', handleMobileBlur);
-    // Load available devices on page load
+
     navigator.mediaDevices.getUserMedia({ audio: true, video: true })
         .then(stream => {
-            // Stop the stream immediately, we just needed permission
             stream.getTracks().forEach(track => track.stop());
             loadAvailableDevices();
         })
