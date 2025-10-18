@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Settings - My App{% endblock %}
+{% block title %}Settings - Kryonix Chat{% endblock %}
 
 {% block content %}
 <div class="container mobile-app-layout">
@@ -9,13 +9,78 @@
             <h3 class="page-title">Settings</h3>
         </div>
         <div class="mobile-page-header" style="display: none;">
-            <a href="{{ url_for('chat') }}" class="back-button"> Back</a>
+            <a href="{{ url_for('chat') }}" class="back-button">← Back</a>
             <h3 class="page-title">Settings</h3>
         </div>
         
         {% if message %}
             <div class="alert alert-{{ message_type }}">{{ message }}</div>
         {% endif %}
+        
+        <!-- Profile Picture Section -->
+        <div class="section">
+            <h3>Profile Picture</h3>
+            <div class="profile-picture-section">
+                <div class="current-profile-pic">
+                    {% if user_data.profile_picture %}
+                    <img src="{{ user_data.profile_picture }}" alt="Profile Picture" id="profile-preview">
+                    {% else %}
+                    <div class="default-avatar" id="profile-preview">{{ current_user.username[0].upper() }}</div>
+                    {% endif %}
+                </div>
+                <div class="profile-pic-actions">
+                    <label for="profile-pic-input" class="button upload-pic-btn">
+                        <i class="fas fa-upload"></i> Upload Picture
+                    </label>
+                    <input type="file" id="profile-pic-input" accept="image/*" style="display: none;">
+                    <button class="button remove-pic-btn" id="remove-pic-btn" {% if not user_data.profile_picture %}disabled{% endif %}>
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Settings Section -->
+        <div class="section">
+            <h3>Account Settings</h3>
+            <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="section" value="account">
+                
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" 
+                           value="{{ user_data.username }}" 
+                           placeholder="Your username"
+                           minlength="3">
+                    <small>Changing your username will log you out</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="text" id="email" name="email" 
+                           value="{{ user_data.email }}" 
+                           placeholder="Your email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="current_password">Current Password:</label>
+                    <input type="password" id="current_password" name="current_password" 
+                           placeholder="Enter current password to change">
+                    <small>Leave blank if not changing password</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="new_password">New Password:</label>
+                    <input type="password" id="new_password" name="new_password" 
+                           placeholder="Enter new password"
+                           minlength="6">
+                    <small>Must be at least 6 characters</small>
+                </div>
+                
+                <button type="submit" class="button">Save Account Settings</button>
+            </form>
+        </div>
         
         <!-- Theme Settings Section -->
         <div class="section">
@@ -40,139 +105,7 @@
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="theme_mode">Theme Mode:</label>
-                    <select id="theme_mode" name="theme_mode">
-                        <option value="system" {% if settings.get('theme_mode', 'system') == 'system' %}selected{% endif %}>System Default</option>
-                        <option value="light" {% if settings.get('theme_mode') == 'light' %}selected{% endif %}>Light</option>
-                        <option value="dark" {% if settings.get('theme_mode') == 'dark' %}selected{% endif %}>Dark</option>
-                    </select>
-                </div>
-                
                 <button type="submit" class="button">Save Theme</button>
-            </form>
-        </div>
-        
-        <!-- Notification Settings Section -->
-        <div class="section">
-            <h3>Notification Settings</h3>
-            <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="section" value="notifications">
-                
-                <div class="form-group">
-                    <label class="switch">
-                        <input type="checkbox" name="desktop_notifications" 
-                               {% if settings.get('desktop_notifications', true) %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Enable Desktop Notifications</span>
-                </div>
-                
-                <div class="form-group">
-                    <label class="switch">
-                        <input type="checkbox" name="sound_notifications" 
-                               {% if settings.get('sound_notifications', true) %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Enable Sound Notifications</span>
-                </div>
-                
-                <div class="form-group">
-                    <label class="switch">
-                        <input type="checkbox" name="message_preview" 
-                               {% if settings.get('message_preview', true) %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Show Message Preview in Notifications</span>
-                </div>
-                
-                <button type="submit" class="button">Save Notifications</button>
-            </form>
-        </div>
-        
-        <!-- Privacy Settings Section -->
-        <div class="section">
-            <h3>Privacy Settings</h3>
-            <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="section" value="privacy">
-                
-                <div class="form-group">
-                    <label class="switch">
-                        <input type="checkbox" name="online_status" 
-                               {% if settings.get('online_status', true) %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Show Online Status to Friends</span>
-                </div>
-                
-                <div class="form-group">
-                    <label class="switch">
-                        <input type="checkbox" name="read_receipts" 
-                               {% if settings.get('read_receipts', true) %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Send Read Receipts</span>
-                </div>
-                
-                <div class="form-group">
-                    <label class="switch">
-                        <input type="checkbox" name="typing_indicators" 
-                               {% if settings.get('typing_indicators', true) %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">Show Typing Indicators</span>
-                </div>
-                
-                <button type="submit" class="button">Save Privacy Settings</button>
-            </form>
-        </div>
-        
-        <!-- Account Settings Section -->
-        <div class="section">
-            <h3>Account Settings</h3>
-            <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="section" value="account">
-                
-                <div class="form-group">
-                    <label for="display_name">Display Name:</label>
-                    <input type="text" id="display_name" name="display_name" 
-                           value="{{ settings.get('display_name', current_user.username) }}" 
-                           placeholder="Your display name">
-                </div>
-                
-                <div class="form-group">
-                    <label for="status_message">Status Message:</label>
-                    <input type="text" id="status_message" name="status_message" 
-                           value="{{ settings.get('status_message', '') }}" 
-                           placeholder="What's on your mind?">
-                </div>
-                
-                <div class="form-group">
-                    <label for="language">Language:</label>
-                    <select id="language" name="language">
-                        <option value="en" {% if settings.get('language', 'en') == 'en' %}selected{% endif %}>English</option>
-                        <option value="es" {% if settings.get('language') == 'es' %}selected{% endif %}>Español</option>
-                        <option value="fr" {% if settings.get('language') == 'fr' %}selected{% endif %}>Français</option>
-                        <option value="de" {% if settings.get('language') == 'de' %}selected{% endif %}>Deutsch</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="button">Save Account Settings</button>
-            </form>
-        </div>
-        
-        <!-- Danger Zone -->
-        <div class="section danger-zone">
-            <h3>Danger Zone</h3>
-            <p>These actions cannot be undone.</p>
-            
-            <form action="{{ url_for('settings') }}" method="POST" class="settings-form" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="section" value="delete_account">
-                <button type="submit" class="button danger-button">Delete My Account</button>
             </form>
         </div>
         
@@ -184,7 +117,9 @@
     document.addEventListener('DOMContentLoaded', () => {
         const desktopHeader = document.querySelector('.desktop-only-header');
         const mobileHeader = document.querySelector('.mobile-page-header');
-        const backButton = document.querySelector('.back-button');
+        const profilePicInput = document.getElementById('profile-pic-input');
+        const profilePreview = document.getElementById('profile-preview');
+        const removePicBtn = document.getElementById('remove-pic-btn');
 
         function updateHeader() {
             if (window.innerWidth <= 768) {
@@ -214,34 +149,144 @@
                 }
             });
         });
+
+        // Profile picture upload
+        profilePicInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image size must be less than 5MB');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload_profile_picture', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Upload failed: ' + data.error);
+                } else if (data.url) {
+                    // Update preview
+                    if (profilePreview.tagName === 'IMG') {
+                        profilePreview.src = data.url;
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = data.url;
+                        img.alt = 'Profile Picture';
+                        img.id = 'profile-preview';
+                        profilePreview.parentNode.replaceChild(img, profilePreview);
+                    }
+                    removePicBtn.disabled = false;
+                    alert('Profile picture updated successfully!');
+                    // Reload page to update everywhere
+                    setTimeout(() => location.reload(), 1000);
+                }
+            } catch (error) {
+                console.error('Error uploading profile picture:', error);
+                alert('Failed to upload profile picture');
+            }
+        });
+
+        // Remove profile picture
+        removePicBtn.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to remove your profile picture?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/upload_profile_picture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ remove: true })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update preview to default avatar
+                    const username = '{{ current_user.username }}';
+                    const defaultAvatar = document.createElement('div');
+                    defaultAvatar.className = 'default-avatar';
+                    defaultAvatar.id = 'profile-preview';
+                    defaultAvatar.textContent = username[0].toUpperCase();
+                    
+                    if (profilePreview.tagName === 'IMG') {
+                        profilePreview.parentNode.replaceChild(defaultAvatar, profilePreview);
+                    }
+                    
+                    removePicBtn.disabled = true;
+                    alert('Profile picture removed successfully!');
+                    setTimeout(() => location.reload(), 1000);
+                }
+            } catch (error) {
+                console.error('Error removing profile picture:', error);
+                alert('Failed to remove profile picture');
+            }
+        });
         
         updateHeader();
         window.addEventListener('resize', updateHeader);
     });
 </script>
+
 <style>
     body {
-    overflow-y: scroll; /* Always show vertical scrollbar */
-    height: 100vh;      /* Full viewport height */
-    overflow-x: auto;   /* Auto horizontal scrolling when needed */
+        overflow-y: scroll;
+        height: 100vh;
+        overflow-x: auto;
     }
+
     .form-group {
-        margin-bottom: 15px;
+        margin-bottom: 20px;
     }
     
     .form-group label {
         display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--light);
     }
     
     .form-group input[type="text"],
+    .form-group input[type="password"],
     .form-group select {
         width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
         font-size: 14px;
+        background: var(--darker);
+        color: var(--light);
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+        border-color: var(--primary);
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 4px;
+        color: var(--gray);
+        font-size: 0.85rem;
     }
     
     .color-picker-wrapper {
@@ -251,90 +296,99 @@
     }
     
     .color-picker-wrapper input[type="color"] {
-        width: 50px;
+        width: 60px;
         height: 40px;
-        border: none;
+        border: 1px solid var(--border);
+        border-radius: 6px;
         cursor: pointer;
+        background: var(--darker);
     }
     
     .color-preview {
-        width: 30px;
-        height: 30px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
     }
-    
-    /* Switch styling */
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 24px;
+
+    /* Profile Picture Styles */
+    .profile-picture-section {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
     }
-    
-    .switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-    
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: .4s;
-        border-radius: 24px;
-    }
-    
-    .slider:before {
-        position: absolute;
-        content: "";
-        height: 16px;
-        width: 16px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
+
+    .current-profile-pic {
+        width: 120px;
+        height: 120px;
         border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--light-gray);
     }
-    
-    input:checked + .slider {
-        background-color: {{ settings['accent_color'] }};
+
+    .current-profile-pic img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
-    
-    input:checked + .slider:before {
-        transform: translateX(26px);
+
+    .default-avatar {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: bold;
+        color: var(--light);
+        background: var(--primary);
     }
-    
-    .switch-label {
-        margin-left: 10px;
-        vertical-align: middle;
+
+    .profile-pic-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
-    
-    .danger-zone {
-        border: 1px solid #ff6b6b;
-        border-radius: 8px;
-        padding: 15px;
-        background-color: #fff5f5;
+
+    .upload-pic-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        margin: 0;
     }
-    
-    .danger-zone h3 {
-        color: #ff6b6b;
-        margin-top: 0;
+
+    .remove-pic-btn {
+        background: var(--danger);
     }
-    
-    .danger-button {
-        background-color: #ff6b6b;
-        border-color: #ff6b6b;
+
+    .remove-pic-btn:hover:not(:disabled) {
+        background: #e54d4d;
     }
-    
-    .danger-button:hover {
-        background-color: #ff5252;
-        border-color: #ff5252;
+
+    .remove-pic-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+        .profile-picture-section {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .profile-pic-actions {
+            width: 100%;
+        }
+
+        .profile-pic-actions .button {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
