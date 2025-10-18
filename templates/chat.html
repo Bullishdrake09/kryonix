@@ -6,6 +6,227 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
 <style>
+/* Search Bar Styles */
+.search-container {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--darker);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--light);
+    outline: none;
+    font-size: 0.9rem;
+}
+
+.search-input:focus {
+    border-color: var(--primary);
+}
+
+/* Create Group Button */
+.create-group-btn {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 16px;
+    width: calc(100% - 32px);
+    background: var(--primary);
+    color: var(--darker);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.create-group-btn:hover {
+    background: var(--primary-dark);
+}
+
+/* Group Chat Indicator */
+.group-indicator {
+    background: var(--primary);
+    color: var(--darker);
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: 600;
+}
+
+/* Media Preview Modal */
+.media-preview-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.media-preview-modal.active {
+    display: flex;
+}
+
+.media-preview-content {
+    max-width: 90%;
+    max-height: 90%;
+    background: var(--darker);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.media-preview-content img,
+.media-preview-content video {
+    max-width: 600px;
+    max-height: 400px;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
+.media-preview-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.media-preview-actions button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.send-media-btn {
+    background: var(--success);
+    color: var(--darker);
+}
+
+.cancel-media-btn {
+    background: var(--danger);
+    color: white;
+}
+
+/* Group Modal */
+.group-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1500;
+    justify-content: center;
+    align-items: center;
+}
+
+.group-modal.active {
+    display: flex;
+}
+
+.group-modal-content {
+    background: var(--darker);
+    padding: 32px;
+    border-radius: 16px;
+    border: 2px solid var(--border);
+    min-width: 400px;
+    max-width: 90%;
+}
+
+.group-modal-content h3 {
+    color: var(--light);
+    margin-bottom: 24px;
+}
+
+.group-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.group-form input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    background: var(--light-gray);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--light);
+    outline: none;
+}
+
+.group-form input[type="text"]:focus {
+    border-color: var(--primary);
+}
+
+.member-selection {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.member-checkbox {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.member-checkbox:hover {
+    background: var(--light-gray);
+}
+
+.member-checkbox input[type="checkbox"] {
+    margin-right: 12px;
+}
+
+.member-checkbox label {
+    cursor: pointer;
+    color: var(--light);
+}
+
+.group-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.group-actions button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.create-group-submit {
+    background: var(--primary);
+    color: var(--darker);
+}
+
+.cancel-group-btn {
+    background: var(--light-gray);
+    color: var(--light);
+}
+
 /* Reply UI Styles */
 .reply-preview {
     background: rgba(138, 43, 226, 0.15);
@@ -116,6 +337,22 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
 }
+
+/* Loading indicator */
+.loading-messages {
+    text-align: center;
+    padding: 12px;
+    color: var(--gray);
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .group-modal-content {
+        min-width: auto;
+        width: 90%;
+        padding: 24px;
+    }
+}
 </style>
 
 <div class="mobile-header" id="mobile-header">
@@ -128,9 +365,21 @@
     <div class="sidebar" id="sidebar">
         <button class="close-button" id="close-sidebar-button"><i class="fas fa-times"></i></button>
         <div class="user-info">
-            <div class="avatar">{{ current_user.username[0].upper() }}</div>
+            <div class="avatar">
+                {% if current_user.profile_picture %}
+                <img src="{{ current_user.profile_picture }}" alt="{{ current_user.username }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                {{ current_user.username[0].upper() }}
+                {% endif %}
+            </div>
             <div class="username">{{ username }}</div>
         </div>
+        
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text" class="search-input" id="contact-search" placeholder="Search contacts...">
+        </div>
+        
         <nav>
             <a href="{{ url_for('chat') }}">Chats</a>
             <a href="{{ url_for('friends') }}">Friends</a>
@@ -140,21 +389,34 @@
             {% endif %}
         </nav>
 
+        <button class="create-group-btn" id="create-group-btn">
+            <i class="fas fa-users"></i> Create Group
+        </button>
+
         <div class="friends-list">
-            <h3>Friends</h3>
+            <h3>Chats</h3>
             <ul id="friend-list-ul">
-                {% if not friends_list %}
-                <p class="initial-chat-message">Select a friend to start chatting</p>
+                {% if not friends_list and not group_chats %}
+                <p class="initial-chat-message">Add friends to start chatting</p>
                 {% endif %}
+                
+                {% for group in group_chats %}
+                <li data-room-id="{{ group.id }}" data-room-type="group" data-room-name="{{ group.name }}">
+                    <div class="friend-avatar" style="background: var(--primary);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span>{{ group.name }} <span class="group-indicator">GROUP</span></span>
+                </li>
+                {% endfor %}
+                
                 {% for friend in friends_list %}
-                <li data-friend-username="{{ friend }}">
-                    <div class="friend-avatar">{{ friend[0].upper() }}
+                <li data-friend-username="{{ friend }}" data-room-type="direct">
+                    <div class="friend-avatar">
+                        <span id="avatar-{{ friend }}">{{ friend[0].upper() }}</span>
                         <span class="status-indicator online" data-username="{{ friend }}"></span>
                     </div>
                     <span>{{ friend }}</span>
                 </li>
-                {% else %}
-                <li>No friends yet. Add some in the <a href="{{ url_for('friends') }}">Friends page</a>!</li>
                 {% endfor %}
             </ul>
         </div>
@@ -194,10 +456,10 @@
         </div>
         
         <div class="chat-messages" id="chat-messages">
-            {% if not friends_list %}
+            {% if not friends_list and not group_chats %}
             <p class="initial-chat-message">Add friends to start chatting!</p>
             {% else %}
-            <p class="initial-chat-message" id="select-chat-prompt">Select a friend from the sidebar to start chatting.</p>
+            <p class="initial-chat-message" id="select-chat-prompt">Select a friend or group from the sidebar to start chatting.</p>
             {% endif %}
         </div>
         
@@ -212,7 +474,44 @@
     </div>
 </div>
 
-<!-- Video Call Modal -->
+<!-- Media Preview Modal -->
+<div class="media-preview-modal" id="media-preview-modal">
+    <div class="media-preview-content">
+        <div id="media-preview-container"></div>
+        <div class="media-preview-actions">
+            <button class="send-media-btn" id="send-media-btn">
+                <i class="fas fa-paper-plane"></i> Send
+            </button>
+            <button class="cancel-media-btn" id="cancel-media-btn">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="group-modal" id="group-modal">
+    <div class="group-modal-content">
+        <h3><i class="fas fa-users"></i> Create New Group</h3>
+        <div class="group-form">
+            <input type="text" id="group-name-input" placeholder="Group Name" maxlength="50">
+            <div class="member-selection" id="member-selection">
+                {% for friend in friends_list %}
+                <div class="member-checkbox">
+                    <input type="checkbox" id="member-{{ friend }}" value="{{ friend }}">
+                    <label for="member-{{ friend }}">{{ friend }}</label>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="group-actions">
+                <button class="create-group-submit" id="create-group-submit">Create</button>
+                <button class="cancel-group-btn" id="cancel-group-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Video Call Modal (keeping existing) -->
 <div class="call-modal" id="call-modal">
     <div class="call-content">
         <div class="call-header">
@@ -284,11 +583,16 @@
     const socket = io();
     const username = "{{ username }}";
     let currentRoom = null;
+    let currentRoomType = 'direct'; // 'direct' or 'group'
     let isLoadingHistory = false;
     let userStatus = 'offline';
     let typingTimeout = null;
     let connectedUsers = {};
-    let replyingTo = null; // Track message being replied to
+    let replyingTo = null;
+    let messageOffset = 0;
+    let hasMoreMessages = true;
+    let isLoadingMore = false;
+    let pendingMediaFile = null;
     
     // WebRTC variables
     let localStream = null;
@@ -303,6 +607,7 @@
             { urls: 'stun:stun1.l.google.com:19302' }
         ]
     };
+    
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menu-toggle');
     const closeSidebarButton = document.getElementById('close-sidebar-button');
@@ -315,6 +620,16 @@
     const statusOverlay = document.getElementById('status-overlay');
     const overlayMessage = document.getElementById('overlay-message');
     const selectChatPrompt = document.getElementById('select-chat-prompt');
+    const contactSearch = document.getElementById('contact-search');
+    const createGroupBtn = document.getElementById('create-group-btn');
+    const groupModal = document.getElementById('group-modal');
+    const cancelGroupBtn = document.getElementById('cancel-group-btn');
+    const createGroupSubmit = document.getElementById('create-group-submit');
+    const groupNameInput = document.getElementById('group-name-input');
+    const mediaPreviewModal = document.getElementById('media-preview-modal');
+    const mediaPreviewContainer = document.getElementById('media-preview-container');
+    const sendMediaBtn = document.getElementById('send-media-btn');
+    const cancelMediaBtn = document.getElementById('cancel-media-btn');
     
     // Reply elements
     const replyPreview = document.getElementById('reply-preview');
@@ -362,28 +677,163 @@
         sidebar.classList.remove('active');
     });
 
-    // Friend click handler
-    friendListUl.addEventListener('click', (event) => {
-        let targetLi = event.target.closest('li');
-        if (targetLi && targetLi.dataset.friendUsername) {
-            const friendUsername = targetLi.dataset.friendUsername;
-            localStorage.setItem('activeFriend', friendUsername);
-            if (window.innerWidth < 768) {
-                sidebar.classList.remove('active');
+    // Contact search functionality
+    contactSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const allContacts = friendListUl.querySelectorAll('li[data-friend-username], li[data-room-id]');
+        
+        allContacts.forEach(contact => {
+            const name = contact.querySelector('span').textContent.toLowerCase();
+            if (name.includes(searchTerm)) {
+                contact.style.display = 'flex';
+            } else {
+                contact.style.display = 'none';
             }
-            selectFriend(friendUsername, targetLi);
+        });
+    });
+
+    // Create group functionality
+    createGroupBtn.addEventListener('click', () => {
+        groupModal.classList.add('active');
+        groupNameInput.value = '';
+        document.querySelectorAll('#member-selection input[type="checkbox"]').forEach(cb => cb.checked = false);
+    });
+
+    cancelGroupBtn.addEventListener('click', () => {
+        groupModal.classList.remove('active');
+    });
+
+    createGroupSubmit.addEventListener('click', async () => {
+        const groupName = groupNameInput.value.trim();
+        const selectedMembers = Array.from(document.querySelectorAll('#member-selection input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
+        
+        if (!groupName) {
+            showOverlay('Please enter a group name');
+            return;
+        }
+        
+        if (selectedMembers.length < 2) {
+            showOverlay('Please select at least 2 members');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/create_group', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: groupName,
+                    members: selectedMembers
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                showOverlay(data.error);
+            } else {
+                groupModal.classList.remove('active');
+                // Add group to list
+                const groupLi = document.createElement('li');
+                groupLi.setAttribute('data-room-id', data.group_id);
+                groupLi.setAttribute('data-room-type', 'group');
+                groupLi.setAttribute('data-room-name', data.group_name);
+                groupLi.innerHTML = `
+                    <div class="friend-avatar" style="background: var(--primary);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span>${data.group_name} <span class="group-indicator">GROUP</span></span>
+                `;
+                friendListUl.insertBefore(groupLi, friendListUl.firstChild);
+                showOverlay('Group created successfully!');
+            }
+        } catch (error) {
+            console.error('Error creating group:', error);
+            showOverlay('Failed to create group');
         }
     });
 
-    function selectFriend(friendUsername, targetLi = null) {
-        const newRoomName = [username, friendUsername].sort().join('-');
+    // Friend/Group click handler
+    friendListUl.addEventListener('click', (event) => {
+        let targetLi = event.target.closest('li');
+        if (targetLi && (targetLi.dataset.friendUsername || targetLi.dataset.roomId)) {
+            if (targetLi.dataset.roomType === 'group') {
+                const groupId = targetLi.dataset.roomId;
+                const groupName = targetLi.dataset.roomName;
+                localStorage.setItem('activeRoom', groupId);
+                localStorage.setItem('activeRoomType', 'group');
+                if (window.innerWidth < 768) {
+                    sidebar.classList.remove('active');
+                }
+                selectRoom(groupId, 'group', groupName, targetLi);
+            } else {
+                const friendUsername = targetLi.dataset.friendUsername;
+                localStorage.setItem('activeFriend', friendUsername);
+                localStorage.setItem('activeRoomType', 'direct');
+                if (window.innerWidth < 768) {
+                    sidebar.classList.remove('active');
+                }
+                selectFriend(friendUsername, targetLi);
+            }
+        }
+    });
+
+    function selectRoom(roomId, roomType, roomName, targetLi = null) {
+        currentRoomType = roomType;
+        const newRoomName = roomId;
+        
         if (currentRoom === newRoomName) return;
+        
         if (currentRoom) {
             socket.emit('leave', { room: currentRoom });
         }
+        
         currentRoom = newRoomName;
+        messageOffset = 0;
+        hasMoreMessages = true;
+        
         socket.emit('join', { room: currentRoom });
         loadChatHistory(currentRoom);
+        
+        Array.from(friendListUl.children).forEach(li => li.classList.remove('active'));
+        if (targetLi) {
+            targetLi.classList.add('active');
+        }
+        
+        if (selectChatPrompt) {
+            selectChatPrompt.style.display = 'none';
+        }
+        
+        // Hide call buttons for group chats
+        if (roomType === 'group') {
+            callIcons.style.display = 'none';
+        } else {
+            callIcons.style.display = 'flex';
+        }
+        
+        cancelReply();
+    }
+
+    function selectFriend(friendUsername, targetLi = null) {
+        currentRoomType = 'direct';
+        const newRoomName = [username, friendUsername].sort().join('-');
+        
+        if (currentRoom === newRoomName) return;
+        
+        if (currentRoom) {
+            socket.emit('leave', { room: currentRoom });
+        }
+        
+        currentRoom = newRoomName;
+        messageOffset = 0;
+        hasMoreMessages = true;
+        
+        socket.emit('join', { room: currentRoom });
+        loadChatHistory(currentRoom);
+        
         Array.from(friendListUl.children).forEach(li => li.classList.remove('active'));
         if (targetLi) {
             targetLi.classList.add('active');
@@ -391,11 +841,13 @@
             const matchingLi = friendListUl.querySelector(`li[data-friend-username="${friendUsername}"]`);
             if (matchingLi) matchingLi.classList.add('active');
         }
+        
         if (selectChatPrompt) {
             selectChatPrompt.style.display = 'none';
         }
+        
         callIcons.style.display = 'flex';
-        cancelReply(); // Clear any active reply
+        cancelReply();
     }
 
     function showOverlay(message) {
@@ -430,7 +882,7 @@
         }
     }
 
-    function addMessage(msg) {
+    function addMessage(msg, prepend = false) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
         messageDiv.setAttribute('data-message-id', msg.id);
@@ -508,7 +960,6 @@
             actionsDiv.appendChild(deleteButton);
             messageDiv.appendChild(actionsDiv);
         } else if (msg.username !== username && !msg.msg.includes("<em>deleted message</em>")) {
-            // Add reply button for received messages
             const actionsDiv = document.createElement('div');
             actionsDiv.classList.add('message-actions');
 
@@ -521,7 +972,16 @@
             messageDiv.appendChild(actionsDiv);
         }
 
-        chatMessagesDiv.appendChild(messageDiv);
+        if (prepend) {
+            const firstMsg = chatMessagesDiv.querySelector('.message');
+            if (firstMsg) {
+                chatMessagesDiv.insertBefore(messageDiv, firstMsg);
+            } else {
+                chatMessagesDiv.appendChild(messageDiv);
+            }
+        } else {
+            chatMessagesDiv.appendChild(messageDiv);
+        }
     }
 
     function startReply(messageId, messageUsername, messageText) {
@@ -564,14 +1024,77 @@
         }
     }
 
+    // Infinite scroll for messages
+    chatMessagesDiv.addEventListener('scroll', async () => {
+        if (chatMessagesDiv.scrollTop === 0 && hasMoreMessages && !isLoadingMore) {
+            await loadMoreMessages();
+        }
+    });
+
+    async function loadMoreMessages() {
+        if (!currentRoom || isLoadingMore || !hasMoreMessages) return;
+        
+        isLoadingMore = true;
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('loading-messages');
+        loadingDiv.textContent = 'Loading more messages...';
+        chatMessagesDiv.insertBefore(loadingDiv, chatMessagesDiv.firstChild);
+        
+        const scrollHeightBefore = chatMessagesDiv.scrollHeight;
+        
+        try {
+            const response = await fetch(`/history/${currentRoom}?offset=${messageOffset}&limit=50`);
+            const data = await response.json();
+            
+            if (data.error) {
+                showOverlay(data.error);
+                loadingDiv.remove();
+                isLoadingMore = false;
+                return;
+            }
+            
+            loadingDiv.remove();
+            
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => addMessage(msg, true));
+                messageOffset += data.messages.length;
+                hasMoreMessages = data.has_more;
+                
+                // Maintain scroll position
+                const scrollHeightAfter = chatMessagesDiv.scrollHeight;
+                chatMessagesDiv.scrollTop = scrollHeightAfter - scrollHeightBefore;
+            } else {
+                hasMoreMessages = false;
+            }
+        } catch (error) {
+            console.error("Error loading more messages:", error);
+            loadingDiv.remove();
+        } finally {
+            isLoadingMore = false;
+        }
+    }
+
     async function loadChatHistory(roomName) {
         if (isLoadingHistory || currentRoom !== roomName) return;
         isLoadingHistory = true;
         chatMessagesDiv.innerHTML = '';
-        currentChatHeader.textContent = `${roomName.replace(username + '-', '').replace('-' + username, '')}`;
+        messageOffset = 0;
+        hasMoreMessages = true;
+        
+        // Set header based on room type
+        if (roomName.startsWith('group_')) {
+            const groupLi = friendListUl.querySelector(`li[data-room-id="${roomName}"]`);
+            if (groupLi) {
+                currentChatHeader.textContent = groupLi.dataset.roomName;
+            }
+        } else {
+            currentChatHeader.textContent = `${roomName.replace(username + '-', '').replace('-' + username, '')}`;
+        }
+        
         try {
-            const response = await fetch(`/history/${roomName}`);
+            const response = await fetch(`/history/${roomName}?offset=0&limit=50`);
             const data = await response.json();
+            
             if (data.error) {
                 showOverlay(data.error);
                 currentRoom = null;
@@ -579,7 +1102,10 @@
                 callIcons.style.display = 'none';
                 return;
             }
+            
             data.messages.forEach(msg => addMessage(msg));
+            messageOffset = data.messages.length;
+            hasMoreMessages = data.has_more;
             scrollToBottom();
         } catch (error) {
             console.error("Error loading chat history:", error);
@@ -601,7 +1127,6 @@
                 msg: messageText
             };
             
-            // Add reply data if replying
             if (replyingTo) {
                 messageData.reply_to = replyingTo;
             }
@@ -613,7 +1138,7 @@
             setTimeout(scrollToBottom, 50);
             socket.emit('typing_stop', { room: currentRoom });
         } else if (!currentRoom) {
-            showOverlay("Please select a friend to chat with first.");
+            showOverlay("Please select a friend or group to chat with first.");
         }
     });
 
@@ -633,33 +1158,88 @@
         }
     });
 
-    fileInput.addEventListener('change', async (event) => {
+    // Paste functionality for images/videos
+    messageInput.addEventListener('paste', async (e) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1 || items[i].type.indexOf('video') !== -1) {
+                e.preventDefault();
+                const blob = items[i].getAsFile();
+                showMediaPreview(blob);
+                break;
+            }
+        }
+    });
+
+    // Also listen for paste on document level
+    document.addEventListener('paste', async (e) => {
+        if (document.activeElement !== messageInput) return;
+        
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1 || items[i].type.indexOf('video') !== -1) {
+                e.preventDefault();
+                const blob = items[i].getAsFile();
+                showMediaPreview(blob);
+                break;
+            }
+        }
+    });
+
+    function showMediaPreview(file) {
         if (!currentRoom) {
-            showOverlay("Please select a friend to chat with first.");
-            fileInput.value = '';
+            showOverlay("Please select a friend or group to chat with first.");
             return;
         }
-        const file = event.target.files[0];
-        if (!file) return;
+        
+        pendingMediaFile = file;
+        mediaPreviewContainer.innerHTML = '';
+        
+        const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : file.type.split('/')[1];
+        const isVideo = file.type.startsWith('video/') || ['mp4', 'webm', 'ogg'].includes(fileExtension);
+        
+        if (isVideo) {
+            const video = document.createElement('video');
+            video.controls = true;
+            video.src = URL.createObjectURL(file);
+            mediaPreviewContainer.appendChild(video);
+        } else {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            mediaPreviewContainer.appendChild(img);
+        }
+        
+        mediaPreviewModal.classList.add('active');
+    }
+
+    sendMediaBtn.addEventListener('click', async () => {
+        if (!pendingMediaFile) return;
+        
+        mediaPreviewModal.classList.remove('active');
+        
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', pendingMediaFile);
+        
         try {
             const response = await fetch('/upload_file', {
                 method: 'POST',
                 body: formData
             });
             const data = await response.json();
+            
             if (data.error) {
                 showOverlay(`File upload failed: ${data.error}`);
             } else if (data.url) {
-                const fileExtension = file.name.split('.').pop().toLowerCase();
+                const fileName = pendingMediaFile.name || 'file';
+                const fileExtension = fileName.split('.').pop().toLowerCase();
                 let messageContent;
+                
                 if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
                     messageContent = `<a href="${data.url}" target="_blank"><img src="${data.url}" class="message-file image" alt="Uploaded Image"></a>`;
                 } else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
                     messageContent = `<video controls src="${data.url}" class="message-file video"></video>`;
                 } else {
-                    messageContent = `<a href="${data.url}" target="_blank">Uploaded file: ${file.name}</a>`;
+                    messageContent = `<a href="${data.url}" target="_blank">Uploaded file: ${fileName}</a>`;
                 }
                 
                 const messageData = {
@@ -668,7 +1248,6 @@
                     msg: messageContent
                 };
                 
-                // Add reply data if replying
                 if (replyingTo) {
                     messageData.reply_to = replyingTo;
                 }
@@ -681,8 +1260,27 @@
             console.error("Error uploading file:", error);
             showOverlay("An error occurred during file upload.");
         } finally {
-            fileInput.value = '';
+            pendingMediaFile = null;
         }
+    });
+
+    cancelMediaBtn.addEventListener('click', () => {
+        mediaPreviewModal.classList.remove('active');
+        pendingMediaFile = null;
+        mediaPreviewContainer.innerHTML = '';
+    });
+
+    fileInput.addEventListener('change', async (event) => {
+        if (!currentRoom) {
+            showOverlay("Please select a friend or group to chat with first.");
+            fileInput.value = '';
+            return;
+        }
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        showMediaPreview(file);
+        fileInput.value = '';
     });
 
     function startEditMessage(messageId, currentMessageText) {
@@ -753,7 +1351,188 @@
         }
     }
 
-    // ===== VIDEO CALL FUNCTIONS =====
+    // Load profile pictures for friends
+    async function loadFriendProfiles() {
+        try {
+            const response = await fetch('/api/get_friend_profiles');
+            const profiles = await response.json();
+            
+            Object.keys(profiles).forEach(friendName => {
+                const avatar = document.getElementById(`avatar-${friendName}`);
+                if (avatar && profiles[friendName].profile_picture) {
+                    avatar.innerHTML = `<img src="${profiles[friendName].profile_picture}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                }
+            });
+        } catch (error) {
+            console.error('Error loading friend profiles:', error);
+        }
+    }
+
+    // WebRTC and Socket.IO events (keeping existing implementation)
+    // ... [Include all the existing WebRTC code from the previous chat.html]
+    
+    socket.on('connect', () => {
+        console.log('Connected to Socket.IO');
+        socket.emit('user_connected');
+        userStatus = 'online';
+        socket.emit('request_statuses');
+        
+        const storedRoomType = localStorage.getItem('activeRoomType');
+        if (storedRoomType === 'group') {
+            const storedRoom = localStorage.getItem('activeRoom');
+            if (storedRoom) {
+                const groupLi = friendListUl.querySelector(`li[data-room-id="${storedRoom}"]`);
+                if (groupLi) {
+                    selectRoom(storedRoom, 'group', groupLi.dataset.roomName, groupLi);
+                }
+            }
+        } else {
+            const storedFriend = localStorage.getItem('activeFriend');
+            if (storedFriend) {
+                selectFriend(storedFriend);
+            }
+        }
+    });
+
+    socket.on('message', (data) => {
+        if (data.room === currentRoom) {
+            addMessage(data);
+            scrollToBottom();
+        }
+    });
+
+    socket.on('message_updated', (data) => {
+        if (data.room === currentRoom) {
+            const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
+                                        ? data.new_text
+                                        : `${data.new_text} <em>(edited)</em>`;
+            updateMessage(data.id, newTextWithEditedTag);
+            scrollToBottom();
+        }
+    });
+
+    socket.on('error', (data) => {
+        console.error('Socket Error:', data.message);
+        showOverlay(data.message);
+        if (data.message.includes('not friends') || data.message.includes('blocked') || data.message.includes('Unauthorized') || data.message.includes('not a member')) {
+            currentRoom = null;
+            chatMessagesDiv.innerHTML = '';
+            currentChatHeader.textContent = "";
+            callIcons.style.display = 'none';
+            if (selectChatPrompt) {
+                selectChatPrompt.style.display = 'block';
+                selectChatPrompt.textContent = "Select a friend or group from the sidebar to start chatting.";
+            }
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from Socket.IO');
+        socket.emit('user_disconnected');
+        showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
+    });
+
+    socket.on('user_status_update', (data) => {
+        updateFriendStatus(data.username, data.status);
+    });
+
+    socket.on('user_typing', (data) => {
+        showTypingIndicator(data.username, data.is_typing);
+    });
+
+    socket.on('all_statuses', (data) => {
+        Object.keys(data).forEach(username => {
+            updateFriendStatus(username, data[username].status);
+        });
+    });
+
+    // WebRTC Call Events
+    socket.on('incoming_call', (data) => {
+        incomingCallData = data;
+        document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
+        document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
+        incomingCallModal.classList.add('active');
+    });
+
+    socket.on('call_answered', async (data) => {
+        callStatus.textContent = 'Connecting...';
+        await createPeerConnection();
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('webrtc_offer', {
+            room: currentRoom,
+            offer: offer
+        });
+        const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
+        logCallToChat(currentCallType, 'started', otherUser);
+    });
+
+    socket.on('call_rejected', (data) => {
+        showOverlay(`${data.rejecter} rejected your call.`);
+        closeCall();
+    });
+
+    socket.on('call_ended', (data) => {
+        showOverlay('Call ended.');
+        closeCall();
+    });
+
+    socket.on('webrtc_offer', async (data) => {
+        if (!peerConnection) {
+            await createPeerConnection();
+        }
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('webrtc_answer', {
+            room: currentRoom,
+            answer: answer
+        });
+    });
+
+    socket.on('webrtc_answer', async (data) => {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    });
+
+    socket.on('webrtc_ice_candidate', async (data) => {
+        if (peerConnection && data.candidate) {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+    });
+
+    function updateFriendStatus(username, status) {
+        const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator';
+            statusIndicator.classList.add(status);
+        }
+        connectedUsers[username] = status;
+    }
+
+    function showTypingIndicator(username, isTyping) {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (isTyping) {
+            if (!typingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'typing-indicator';
+                indicator.innerHTML = `
+                    <span>${username}</span>
+                    <span>is typing</span>
+                    <span>...</span>
+                `;
+                chatMessagesDiv.appendChild(indicator);
+                scrollToBottom();
+            }
+        } else {
+            const existingIndicator = document.getElementById('typing-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+        }
+    }
+
+    // WebRTC Functions
     async function loadAvailableDevices() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -859,8 +1638,8 @@
     }
 
     async function startCall(callType) {
-        if (!currentRoom) {
-            showOverlay("Please select a friend to call.");
+        if (!currentRoom || currentRoomType === 'group') {
+            showOverlay("Calls are only available for direct messages.");
             return;
         }
         const receiver = currentRoom.replace(username + '-', '').replace('-' + username, '');
@@ -1091,166 +1870,7 @@
         }
     });
 
-    // ===== SOCKET EVENTS =====
-    socket.on('connect', () => {
-        console.log('Connected to Socket.IO');
-        socket.emit('user_connected');
-        userStatus = 'online';
-        socket.emit('request_statuses');
-        const storedFriend = localStorage.getItem('activeFriend');
-        if (storedFriend) {
-            selectFriend(storedFriend);
-        } else {
-            const firstFriendLi = friendListUl.querySelector('li[data-friend-username]');
-            if (firstFriendLi) {
-                selectFriend(firstFriendLi.dataset.friendUsername, firstFriendLi);
-            } else {
-                currentChatHeader.textContent = "";
-                if (selectChatPrompt) {
-                    selectChatPrompt.style.display = 'block';
-                    selectChatPrompt.textContent = "Add friends to start chatting!";
-                }
-            }
-        }
-    });
-
-    socket.on('message', (data) => {
-        if (data.room === currentRoom) {
-            addMessage(data);
-            scrollToBottom();
-        }
-    });
-
-    socket.on('message_updated', (data) => {
-        if (data.room === currentRoom) {
-            const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
-                                        ? data.new_text
-                                        : `${data.new_text} <em>(edited)</em>`;
-            updateMessage(data.id, newTextWithEditedTag);
-            scrollToBottom();
-        }
-    });
-
-    socket.on('error', (data) => {
-        console.error('Socket Error:', data.message);
-        showOverlay(data.message);
-        if (data.message.includes('not friends') || data.message.includes('blocked') || data.message.includes('Unauthorized')) {
-            currentRoom = null;
-            chatMessagesDiv.innerHTML = '';
-            currentChatHeader.textContent = "";
-            callIcons.style.display = 'none';
-            if (selectChatPrompt) {
-                selectChatPrompt.style.display = 'block';
-                selectChatPrompt.textContent = "Select a friend from the sidebar to start chatting.";
-            }
-        }
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Disconnected from Socket.IO');
-        socket.emit('user_disconnected');
-        showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
-    });
-
-    socket.on('user_status_update', (data) => {
-        updateFriendStatus(data.username, data.status);
-    });
-
-    socket.on('user_typing', (data) => {
-        showTypingIndicator(data.username, data.is_typing);
-    });
-
-    socket.on('all_statuses', (data) => {
-        Object.keys(data).forEach(username => {
-            updateFriendStatus(username, data[username].status);
-        });
-    });
-
-    socket.on('incoming_call', (data) => {
-        incomingCallData = data;
-        document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
-        document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
-        incomingCallModal.classList.add('active');
-    });
-
-    socket.on('call_answered', async (data) => {
-        callStatus.textContent = 'Connecting...';
-        await createPeerConnection();
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socket.emit('webrtc_offer', {
-            room: currentRoom,
-            offer: offer
-        });
-        const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
-        logCallToChat(currentCallType, 'started', otherUser);
-    });
-
-    socket.on('call_rejected', (data) => {
-        showOverlay(`${data.rejecter} rejected your call.`);
-        closeCall();
-    });
-
-    socket.on('call_ended', (data) => {
-        showOverlay('Call ended.');
-        closeCall();
-    });
-
-    socket.on('webrtc_offer', async (data) => {
-        if (!peerConnection) {
-            await createPeerConnection();
-        }
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        socket.emit('webrtc_answer', {
-            room: currentRoom,
-            answer: answer
-        });
-    });
-
-    socket.on('webrtc_answer', async (data) => {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-    });
-
-    socket.on('webrtc_ice_candidate', async (data) => {
-        if (peerConnection && data.candidate) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-        }
-    });
-
-    function updateFriendStatus(username, status) {
-        const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
-        if (statusIndicator) {
-            statusIndicator.className = 'status-indicator';
-            statusIndicator.classList.add(status);
-        }
-        connectedUsers[username] = status;
-    }
-
-    function showTypingIndicator(username, isTyping) {
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (isTyping) {
-            if (!typingIndicator) {
-                const indicator = document.createElement('div');
-                indicator.id = 'typing-indicator';
-                indicator.className = 'typing-indicator';
-                indicator.innerHTML = `
-                    <span>${username}</span>
-                    <span>is typing</span>
-                    <span>...</span>
-                `;
-                chatMessagesDiv.appendChild(indicator);
-                scrollToBottom();
-            }
-        } else {
-            const existingIndicator = document.getElementById('typing-indicator');
-            if (existingIndicator) {
-                existingIndicator.remove();
-            }
-        }
-    }
-
+    // Mobile keyboard handling
     const chatArea = document.querySelector('.chat-area');
     let isAboutToSend = false;
     function handleMobileFocus() {
