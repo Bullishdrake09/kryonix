@@ -19,10 +19,14 @@ app.config['SECRET_KEY'] = 'YOUR_VERY_SECRET_KEY'
 app.config['USER_DATA_FILE'] = 'users.json'
 app.config['BANNED_EMAILS_FILE'] = 'banned_emails.json'
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['PROFILE_PICS_FOLDER'] = 'profile_pics'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['GROUP_CHATS_FILE'] = 'group_chats.json'
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+if not os.path.exists(app.config['PROFILE_PICS_FOLDER']):
+    os.makedirs(app.config['PROFILE_PICS_FOLDER'])
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 login_manager = LoginManager()
@@ -33,9 +37,10 @@ user_sids = {}
 active_calls = {}
 
 # Rate limiting
-user_message_times = defaultdict(lambda: deque(maxlen=20))  # Track last 20 messages per user
-RATE_LIMIT_MESSAGES = 10  # Max messages
-RATE_LIMIT_WINDOW = 5  # Within 5 seconds
+user_message_times = defaultdict(lambda: deque(maxlen=20))
+RATE_LIMIT_MESSAGES = 10
+RATE_LIMIT_WINDOW = 5
+MESSAGES_PER_PAGE = 50
 
 # File lock for thread-safe operations
 file_lock = threading.Lock()
@@ -53,21 +58,20 @@ def check_rate_limit(username):
     now = time.time()
     user_times = user_message_times[username]
     
-    # Remove messages older than the window
     while user_times and user_times[0] < now - RATE_LIMIT_WINDOW:
         user_times.popleft()
     
-    # Check if user exceeded limit
     if len(user_times) >= RATE_LIMIT_MESSAGES:
         return False
     
-    # Add current message time
     user_times.append(now)
     return True
 
 # --- User Management (Flask-Login) ---
 class User(UserMixin):
-    def __init__(self, id, username, email, password_hash, friends=None, requests=None, blocked=None, chat_history=None, settings=None, timeout_until=None, status='offline', last_seen=None):
+    def __init__(self, id, username, email, password_hash, friends=None, requests=None, blocked=None, 
+                 chat_history=None, settings=None, timeout_until=None, status='offline', last_seen=None, 
+                 profile_picture=None):
         self.id = id
         self.username = username
         self.email = email
@@ -80,6 +84,7 @@ class User(UserMixin):
         self.timeout_until = datetime.fromisoformat(timeout_until) if timeout_until else None
         self.status = status
         self.last_seen = datetime.fromisoformat(last_seen) if last_seen else datetime.now()
+        self.profile_picture = profile_picture
 
     def to_dict(self):
         return {
@@ -93,7 +98,8 @@ class User(UserMixin):
             'settings': self.settings,
             'timeout_until': self.timeout_until.isoformat() if self.timeout_until else None,
             'status': self.status,
-            'last_seen': self.last_seen.isoformat() if self.last_seen else None
+            'last_seen': self.last_seen.isoformat() if self.last_seen else None,
+            'profile_picture': self.profile_picture
         }
 
     @property
@@ -116,13 +122,40 @@ class User(UserMixin):
                 user_data.get('settings'),
                 user_data.get('timeout_until'),
                 user_data.get('status', 'offline'),
-                user_data.get('last_seen')
+                user_data.get('last_seen'),
+                user_data.get('profile_picture')
             )
         return None
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(user_id)
+
+# --- Group Chat Functions ---
+def load_group_chats():
+    """Load group chat data"""
+    with file_lock:
+        try:
+            if not os.path.exists(app.config['GROUP_CHATS_FILE']):
+                return {}
+            with open(app.config['GROUP_CHATS_FILE'], 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            app.logger.error(f"Error loading group chats: {e}")
+            return {}
+
+def save_group_chats(group_chats):
+    """Save group chat data"""
+    with file_lock:
+        try:
+            temp_file = app.config['GROUP_CHATS_FILE'] + '.tmp'
+            with open(temp_file, 'w') as f:
+                json.dump(group_chats, f, indent=4)
+            os.replace(temp_file, app.config['GROUP_CHATS_FILE'])
+            return True
+        except Exception as e:
+            app.logger.error(f"Error saving group chats: {e}")
+            return False
 
 # --- Data Persistence Functions with Error Handling ---
 def load_all_users_data():
@@ -132,7 +165,6 @@ def load_all_users_data():
             if not os.path.exists(app.config['USER_DATA_FILE']):
                 return {}
             
-            # Create backup before reading
             if os.path.exists(app.config['USER_DATA_FILE']):
                 backup_file = app.config['USER_DATA_FILE'] + '.backup'
                 try:
@@ -147,7 +179,6 @@ def load_all_users_data():
                 return data
         except json.JSONDecodeError as e:
             app.logger.error(f"JSON decode error in {app.config['USER_DATA_FILE']}: {e}")
-            # Try to load from backup
             backup_file = app.config['USER_DATA_FILE'] + '.backup'
             if os.path.exists(backup_file):
                 try:
@@ -168,11 +199,9 @@ def save_all_users_data(all_users_data):
         try:
             temp_file = app.config['USER_DATA_FILE'] + '.tmp'
             
-            # Write to temporary file first
             with open(temp_file, 'w') as f:
                 json.dump(all_users_data, f, indent=4)
             
-            # Atomic rename (replaces original file)
             if os.path.exists(app.config['USER_DATA_FILE']):
                 backup_file = app.config['USER_DATA_FILE'] + '.backup'
                 os.replace(app.config['USER_DATA_FILE'], backup_file)
@@ -181,7 +210,6 @@ def save_all_users_data(all_users_data):
             return True
         except Exception as e:
             app.logger.error(f"Error saving user data: {e}")
-            # Try to restore from backup if save failed
             backup_file = app.config['USER_DATA_FILE'] + '.backup'
             if os.path.exists(backup_file) and not os.path.exists(app.config['USER_DATA_FILE']):
                 try:
@@ -214,15 +242,30 @@ def get_user_by_username_or_email(login_field):
                         data.get('chat_history'), data.get('settings'),
                         data.get('timeout_until'),
                         data.get('status', 'offline'),
-                        data.get('last_seen'))
+                        data.get('last_seen'),
+                        data.get('profile_picture'))
     return None
 
 def add_message_to_history(room, message_data):
     """Add message with better error handling"""
     try:
         all_users = load_all_users_data()
-        user1, user2 = room.split('-')
         
+        # Handle group chats
+        if room.startswith('group_'):
+            group_chats = load_group_chats()
+            if room in group_chats:
+                if 'messages' not in group_chats[room]:
+                    group_chats[room]['messages'] = []
+                group_chats[room]['messages'].append(message_data)
+                # Limit to last 5000 messages
+                if len(group_chats[room]['messages']) > 5000:
+                    group_chats[room]['messages'] = group_chats[room]['messages'][-2500:]
+                return save_group_chats(group_chats)
+            return False
+        
+        # Handle direct messages
+        user1, user2 = room.split('-')
         modified = False
         for user_key in [user1, user2]:
             if user_key in all_users:
@@ -231,9 +274,8 @@ def add_message_to_history(room, message_data):
                 if room not in all_users[user_key]['chat_history']:
                     all_users[user_key]['chat_history'][room] = []
                 
-                # Limit history to last 1000 messages per room to prevent bloat
-                if len(all_users[user_key]['chat_history'][room]) >= 1000:
-                    all_users[user_key]['chat_history'][room] = all_users[user_key]['chat_history'][room][-500:]
+                if len(all_users[user_key]['chat_history'][room]) >= 5000:
+                    all_users[user_key]['chat_history'][room] = all_users[user_key]['chat_history'][room][-2500:]
                 
                 all_users[user_key]['chat_history'][room].append(message_data)
                 modified = True
@@ -247,6 +289,18 @@ def add_message_to_history(room, message_data):
 
 def update_message_in_history(room, message_id, new_text):
     try:
+        # Handle group chats
+        if room.startswith('group_'):
+            group_chats = load_group_chats()
+            if room in group_chats and 'messages' in group_chats[room]:
+                for msg in group_chats[room]['messages']:
+                    if msg.get('id') == message_id:
+                        msg['msg'] = new_text
+                        break
+                return save_group_chats(group_chats)
+            return False
+        
+        # Handle direct messages
         all_users = load_all_users_data()
         user1, user2 = room.split('-')
 
@@ -263,6 +317,18 @@ def update_message_in_history(room, message_id, new_text):
 
 def delete_message_from_history(room, message_id):
     try:
+        # Handle group chats
+        if room.startswith('group_'):
+            group_chats = load_group_chats()
+            if room in group_chats and 'messages' in group_chats[room]:
+                for msg in group_chats[room]['messages']:
+                    if msg.get('id') == message_id:
+                        msg['msg'] = "<em>deleted message</em>"
+                        break
+                return save_group_chats(group_chats)
+            return False
+        
+        # Handle direct messages
         all_users = load_all_users_data()
         user1, user2 = room.split('-')
 
@@ -277,15 +343,32 @@ def delete_message_from_history(room, message_id):
         app.logger.error(f"Error deleting message: {e}")
         return False
 
-def get_room_history(room_name):
+def get_room_history(room_name, offset=0, limit=MESSAGES_PER_PAGE):
+    """Get paginated room history"""
     try:
+        # Handle group chats
+        if room_name.startswith('group_'):
+            group_chats = load_group_chats()
+            if room_name in group_chats and 'messages' in group_chats[room_name]:
+                messages = group_chats[room_name]['messages']
+                total = len(messages)
+                start = max(0, total - offset - limit)
+                end = total - offset if offset > 0 else total
+                return messages[start:end], total
+            return [], 0
+        
+        # Handle direct messages
         user_data = load_user_data(current_user.username)
         if user_data and 'chat_history' in user_data and room_name in user_data['chat_history']:
-            return user_data['chat_history'][room_name]
-        return []
+            messages = user_data['chat_history'][room_name]
+            total = len(messages)
+            start = max(0, total - offset - limit)
+            end = total - offset if offset > 0 else total
+            return messages[start:end], total
+        return [], 0
     except Exception as e:
         app.logger.error(f"Error getting room history: {e}")
-        return []
+        return [], 0
 
 def update_user_status(username, status):
     try:
@@ -316,7 +399,8 @@ def get_all_users_statuses():
         for username, data in all_users.items():
             statuses[username] = {
                 'status': data.get('status', 'offline'),
-                'last_seen': data.get('last_seen')
+                'last_seen': data.get('last_seen'),
+                'profile_picture': data.get('profile_picture')
             }
         return statuses
     except Exception as e:
@@ -405,7 +489,8 @@ def register():
             'settings': {'primary_color': '#0f0f0f', 'accent_color': '#ff3f81'},
             'timeout_until': None,
             'status': 'offline',
-            'last_seen': datetime.now().isoformat()
+            'last_seen': datetime.now().isoformat(),
+            'profile_picture': None
         }
         all_users[username] = new_user_data
         if save_all_users_data(all_users):
@@ -467,6 +552,17 @@ def chat():
     user_data = load_user_data(current_user.username)
     friends_list = user_data.get('friends', []) if user_data else []
     
+    # Get group chats where user is a member
+    group_chats = load_group_chats()
+    user_groups = []
+    for group_id, group_data in group_chats.items():
+        if current_user.username in group_data.get('members', []):
+            user_groups.append({
+                'id': group_id,
+                'name': group_data.get('name', 'Unnamed Group'),
+                'members': group_data.get('members', [])
+            })
+    
     if user_data:
         session['primary_color'] = user_data['settings'].get('primary_color', '#0f0f0f')
         session['accent_color'] = user_data['settings'].get('accent_color', '#ff3f81')
@@ -474,12 +570,29 @@ def chat():
     return render_template('chat.html', 
                            username=current_user.username, 
                            friends_list=friends_list,
+                           group_chats=user_groups,
                            current_user=current_user)
 
 @app.route('/history/<room_name>')
 @login_required
 def history(room_name):
     try:
+        offset = int(request.args.get('offset', 0))
+        limit = int(request.args.get('limit', MESSAGES_PER_PAGE))
+        
+        # Handle group chats
+        if room_name.startswith('group_'):
+            group_chats = load_group_chats()
+            if room_name not in group_chats:
+                return jsonify({'error': 'Group not found'}), 404
+            
+            if current_user.username not in group_chats[room_name].get('members', []):
+                return jsonify({'error': 'You are not a member of this group'}), 403
+            
+            messages, total = get_room_history(room_name, offset, limit)
+            return jsonify(messages=messages, total=total, has_more=(offset + len(messages)) < total)
+        
+        # Handle direct messages
         user1, user2 = room_name.split('-')
         
         if not (current_user.username == user1 or current_user.username == user2):
@@ -497,8 +610,8 @@ def history(room_name):
                 return jsonify({'error': f'You are blocked by {target_username}. Cannot view chat history.'}), 403
             return jsonify({'error': 'You are not friends with this user. Cannot view chat history.'}), 403
 
-        history_messages = get_room_history(room_name)
-        return jsonify(messages=history_messages)
+        messages, total = get_room_history(room_name, offset, limit)
+        return jsonify(messages=messages, total=total, has_more=(offset + len(messages)) < total)
     except Exception as e:
         app.logger.error(f"Error loading history: {e}")
         return jsonify({'error': 'Failed to load history'}), 500
@@ -507,6 +620,10 @@ def history(room_name):
 @login_required
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/profile_pics/<filename>')
+def profile_picture(filename):
+    return send_from_directory(app.config['PROFILE_PICS_FOLDER'], filename)
 
 @app.route('/upload_file', methods=['POST'])
 @login_required
@@ -528,6 +645,100 @@ def upload_file():
     except Exception as e:
         app.logger.error(f"Error saving file: {e}")
         return jsonify({'error': f'Failed to save file: {str(e)}'}), 500
+
+@app.route('/upload_profile_picture', methods=['POST'])
+@login_required
+def upload_profile_picture():
+    try:
+        # Handle profile picture removal
+        if request.is_json:
+            data = request.get_json()
+            if data.get('remove'):
+                user_data = load_user_data(current_user.username)
+                if user_data and user_data.get('profile_picture'):
+                    old_pic = user_data['profile_picture'].split('/')[-1]
+                    old_path = os.path.join(app.config['PROFILE_PICS_FOLDER'], old_pic)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                    user_data['profile_picture'] = None
+                    save_user_data(user_data)
+                    return jsonify({'success': True})
+                return jsonify({'error': 'No profile picture to remove'}), 400
+        
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        
+        # Check if file is an image
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+        if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            return jsonify({'error': 'Invalid file type. Only images allowed.'}), 400
+        
+        filename = secure_filename(file.filename)
+        timestamp = int(time.time())
+        unique_filename = f"{current_user.username}_{timestamp}_{filename}"
+        file_path = os.path.join(app.config['PROFILE_PICS_FOLDER'], unique_filename)
+        
+        # Delete old profile picture if exists
+        user_data = load_user_data(current_user.username)
+        if user_data and user_data.get('profile_picture'):
+            old_pic = user_data['profile_picture'].split('/')[-1]
+            old_path = os.path.join(app.config['PROFILE_PICS_FOLDER'], old_pic)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        
+        file.save(file_path)
+        file_url = url_for('profile_picture', filename=unique_filename)
+        
+        # Update user data
+        user_data['profile_picture'] = file_url
+        save_user_data(user_data)
+        
+        return jsonify({'url': file_url})
+    except Exception as e:
+        app.logger.error(f"Error uploading profile picture: {e}")
+        return jsonify({'error': f'Failed to upload profile picture: {str(e)}'}), 500
+
+@app.route('/create_group', methods=['POST'])
+@login_required
+def create_group():
+    try:
+        data = request.get_json()
+        group_name = data.get('name', '').strip()
+        member_usernames = data.get('members', [])
+        
+        if not group_name:
+            return jsonify({'error': 'Group name is required'}), 400
+        
+        if len(member_usernames) < 2:
+            return jsonify({'error': 'At least 2 other members required'}), 400
+        
+        # Verify all members are friends
+        user_data = load_user_data(current_user.username)
+        for member in member_usernames:
+            if member not in user_data.get('friends', []):
+                return jsonify({'error': f'{member} is not your friend'}), 400
+        
+        # Create group
+        group_id = f"group_{int(time.time())}_{secrets.token_hex(4)}"
+        group_chats = load_group_chats()
+        
+        group_chats[group_id] = {
+            'name': group_name,
+            'creator': current_user.username,
+            'members': [current_user.username] + member_usernames,
+            'created_at': datetime.now().isoformat(),
+            'messages': []
+        }
+        
+        if save_group_chats(group_chats):
+            return jsonify({'success': True, 'group_id': group_id, 'group_name': group_name})
+        return jsonify({'error': 'Failed to create group'}), 500
+    except Exception as e:
+        app.logger.error(f"Error creating group: {e}")
+        return jsonify({'error': 'Failed to create group'}), 500
 
 @app.route('/friends', methods=['GET', 'POST'])
 @login_required
@@ -681,28 +892,119 @@ def settings():
     message_type = None
 
     if request.method == 'POST':
-        new_primary = request.form.get('primary_color')
-        new_accent = request.form.get('accent_color')
+        section = request.form.get('section', 'theme')
+        
+        if section == 'theme':
+            new_primary = request.form.get('primary_color')
+            new_accent = request.form.get('accent_color')
 
-        if new_primary and new_accent:
-            user_data['settings']['primary_color'] = new_primary
-            user_data['settings']['accent_color'] = new_accent
-            if save_user_data(user_data):
-                session['primary_color'] = new_primary
-                session['accent_color'] = new_accent
-                message = "Theme settings updated successfully!"
-                message_type = "success"
+            if new_primary and new_accent:
+                user_data['settings']['primary_color'] = new_primary
+                user_data['settings']['accent_color'] = new_accent
+                if save_user_data(user_data):
+                    session['primary_color'] = new_primary
+                    session['accent_color'] = new_accent
+                    message = "Theme settings updated successfully!"
+                    message_type = "success"
+                else:
+                    message = "Failed to update settings. Please try again."
+                    message_type = "error"
             else:
-                message = "Failed to update settings. Please try again."
+                message = "Both colors are required."
                 message_type = "error"
-        else:
-            message = "Both colors are required."
-            message_type = "error"
+        
+        elif section == 'account':
+            new_username = request.form.get('username', '').strip()
+            new_email = request.form.get('email', '').strip()
+            current_password = request.form.get('current_password', '')
+            new_password = request.form.get('new_password', '')
+            
+            all_users = load_all_users_data()
+            
+            # Change username
+            if new_username and new_username != current_user.username:
+                if len(new_username) < 3:
+                    message = "Username must be at least 3 characters."
+                    message_type = "error"
+                elif new_username in all_users:
+                    message = "Username already taken."
+                    message_type = "error"
+                else:
+                    # Update username everywhere
+                    old_username = current_user.username
+                    user_data['username'] = new_username
+                    
+                    # Update in all users' friend lists
+                    for uname, udata in all_users.items():
+                        if old_username in udata.get('friends', []):
+                            udata['friends'].remove(old_username)
+                            udata['friends'].append(new_username)
+                        if old_username in udata.get('requests', []):
+                            udata['requests'].remove(old_username)
+                            udata['requests'].append(new_username)
+                        if old_username in udata.get('blocked', []):
+                            udata['blocked'].remove(old_username)
+                            udata['blocked'].append(new_username)
+                    
+                    # Move user data to new key
+                    all_users[new_username] = user_data
+                    del all_users[old_username]
+                    
+                    if save_all_users_data(all_users):
+                        logout_user()
+                        flash('Username changed successfully! Please log in again.', 'success')
+                        return redirect(url_for('login'))
+                    else:
+                        message = "Failed to change username."
+                        message_type = "error"
+            
+            # Change email
+            if new_email and new_email != user_data['email']:
+                if not "@" in new_email or "." not in new_email:
+                    message = "Invalid email format."
+                    message_type = "error"
+                else:
+                    email_exists = False
+                    for udata in all_users.values():
+                        if udata['email'] == new_email:
+                            email_exists = True
+                            break
+                    
+                    if email_exists:
+                        message = "Email already in use."
+                        message_type = "error"
+                    else:
+                        user_data['email'] = new_email
+                        if save_user_data(user_data):
+                            message = "Email updated successfully!"
+                            message_type = "success"
+                        else:
+                            message = "Failed to update email."
+                            message_type = "error"
+            
+            # Change password
+            if current_password and new_password:
+                if not check_password_hash(user_data['password'], current_password):
+                    message = "Current password is incorrect."
+                    message_type = "error"
+                elif len(new_password) < 6:
+                    message = "New password must be at least 6 characters."
+                    message_type = "error"
+                else:
+                    user_data['password'] = generate_password_hash(new_password)
+                    if save_user_data(user_data):
+                        message = "Password changed successfully!"
+                        message_type = "success"
+                    else:
+                        message = "Failed to change password."
+                        message_type = "error"
 
     current_settings = load_user_data(current_user.username).get('settings', {'primary_color': '#0f0f0f', 'accent_color': '#ff3f81'})
+    user_data = load_user_data(current_user.username)
     return render_template('settings.html', 
                            current_user=current_user, 
                            settings=current_settings,
+                           user_data=user_data,
                            message=message,
                            message_type=message_type)
 
@@ -724,7 +1026,8 @@ def admin_page():
                                            data.get('chat_history'), data.get('settings'), 
                                            data.get('timeout_until'),
                                            data.get('status', 'offline'),
-                                           data.get('last_seen')))
+                                           data.get('last_seen'),
+                                           data.get('profile_picture')))
 
     message = None
     message_type = None
@@ -847,7 +1150,8 @@ def admin_page():
                                            data.get('chat_history'), data.get('settings'), 
                                            data.get('timeout_until'),
                                            data.get('status', 'offline'),
-                                           data.get('last_seen')))
+                                           data.get('last_seen'),
+                                           data.get('profile_picture')))
 
     return render_template('admin.html', 
                            current_user=current_user, 
@@ -858,7 +1162,7 @@ def admin_page():
                            message_type=message_type,
                            show_login=False)
 
-# --- SocketIO Events ---
+# === SOCKETIO EVENTS ===
 @socketio.on('connect')
 def handle_connect():
     if current_user.is_authenticated:
@@ -898,6 +1202,22 @@ def on_join(data):
             emit('error', {'message': f'You are temporarily timed out until {current_user.timeout_until.strftime("%Y-%m-%d %H:%M")}.'}, room=request.sid)
             return
 
+        # Handle group chats
+        if room.startswith('group_'):
+            group_chats = load_group_chats()
+            if room not in group_chats:
+                emit('error', {'message': 'Group not found.'}, room=request.sid)
+                return
+            
+            if username not in group_chats[room].get('members', []):
+                emit('error', {'message': 'You are not a member of this group.'}, room=request.sid)
+                return
+            
+            join_room(room)
+            app.logger.info(f'User {username} joined group: {room}')
+            return
+
+        # Handle direct messages
         users_in_room = room.split('-')
         other_user = None
         if users_in_room[0] == username:
@@ -956,13 +1276,12 @@ def handle_message(data):
         username = current_user.username
         room = data['room']
         msg = data['msg']
-        reply_to = data.get('reply_to')  # Optional reply data
+        reply_to = data.get('reply_to')
         
         if current_user.is_timed_out:
             emit('error', {'message': f'You are temporarily timed out until {current_user.timeout_until.strftime("%Y-%m-%d %H:%M")}. Cannot send messages.'}, room=request.sid)
             return
         
-        # Rate limiting
         if not check_rate_limit(username):
             emit('error', {'message': f'You are sending messages too quickly. Please wait a moment.'}, room=request.sid)
             app.logger.warning(f"Rate limit exceeded for user {username}")
@@ -979,11 +1298,9 @@ def handle_message(data):
             'room': room
         }
         
-        # Add reply information if present
         if reply_to:
             message_data['reply_to'] = reply_to
         
-        # Save to history with error handling
         if not add_message_to_history(room, message_data):
             app.logger.error(f"Failed to save message to history for {username} in {room}")
             emit('error', {'message': 'Failed to save message. Please try again.'}, room=request.sid)
@@ -1007,12 +1324,19 @@ def handle_edit_message(data):
             emit('error', {'message': f'You are temporarily timed out until {current_user.timeout_until.strftime("%Y-%m-%d %H:%M")}. Cannot edit messages.'}, room=request.sid)
             return
 
-        user_data = load_user_data(username)
-        if not user_data:
-            emit('error', {'message': 'User data not found.'}, room=request.sid)
-            return
-            
-        chat_history = user_data.get('chat_history', {}).get(room, [])
+        # Get message history
+        if room.startswith('group_'):
+            group_chats = load_group_chats()
+            if room not in group_chats:
+                emit('error', {'message': 'Group not found.'}, room=request.sid)
+                return
+            chat_history = group_chats[room].get('messages', [])
+        else:
+            user_data = load_user_data(username)
+            if not user_data:
+                emit('error', {'message': 'User data not found.'}, room=request.sid)
+                return
+            chat_history = user_data.get('chat_history', {}).get(room, [])
 
         message_found = False
         updated_msg_content = new_text 
@@ -1049,12 +1373,19 @@ def handle_delete_message(data):
             emit('error', {'message': f'You are temporarily timed out until {current_user.timeout_until.strftime("%Y-%m-%d %H:%M")}. Cannot delete messages.'}, room=request.sid)
             return
 
-        user_data = load_user_data(username)
-        if not user_data:
-            emit('error', {'message': 'User data not found.'}, room=request.sid)
-            return
-            
-        chat_history = user_data.get('chat_history', {}).get(room, [])
+        # Get message history
+        if room.startswith('group_'):
+            group_chats = load_group_chats()
+            if room not in group_chats:
+                emit('error', {'message': 'Group not found.'}, room=request.sid)
+                return
+            chat_history = group_chats[room].get('messages', [])
+        else:
+            user_data = load_user_data(username)
+            if not user_data:
+                emit('error', {'message': 'User data not found.'}, room=request.sid)
+                return
+            chat_history = user_data.get('chat_history', {}).get(room, [])
 
         message_found = False
         for msg_obj in chat_history:
@@ -1318,7 +1649,8 @@ if __name__ == '__main__':
             'settings': {'primary_color': '#ff3f81', 'accent_color': '#0f0f0f'},
             'timeout_until': None,
             'status': 'offline',
-            'last_seen': datetime.now().isoformat()
+            'last_seen': datetime.now().isoformat(),
+            'profile_picture': None
         }
         all_users['admin'] = admin_data
         save_all_users_data(all_users)
