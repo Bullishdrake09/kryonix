@@ -144,6 +144,8 @@
     border: 2px solid var(--border);
     min-width: 400px;
     max-width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .group-modal-content h3 {
@@ -201,6 +203,71 @@
     color: var(--light);
 }
 
+.group-members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.group-member-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--light-gray);
+    border-radius: 8px;
+}
+
+.member-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: var(--darker);
+    overflow: hidden;
+}
+
+.member-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.creator-badge {
+    background: var(--primary);
+    color: var(--darker);
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: 600;
+}
+
+.kick-btn {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.kick-btn:hover {
+    background: #e54d4d;
+}
+
 .group-actions {
     display: flex;
     gap: 12px;
@@ -225,6 +292,15 @@
 .cancel-group-btn {
     background: var(--light-gray);
     color: var(--light);
+}
+
+.leave-group-btn {
+    background: var(--danger);
+    color: white;
+}
+
+.leave-group-btn:hover {
+    background: #e54d4d;
 }
 
 /* Reply UI Styles */
@@ -440,7 +516,7 @@
                         <i class="fas fa-video"></i>
                     </button>
                 </div>
-                <a href="{{ url_for('friends') }}">Manage Friends</a>
+                <a href="#" id="edit-group-btn" style="display: none;">Edit Group</a>
             </div>
         </div>
         
@@ -489,11 +565,13 @@
     </div>
 </div>
 
-<!-- Create Group Modal -->
+<!-- Create/Edit Group Modal -->
 <div class="group-modal" id="group-modal">
     <div class="group-modal-content">
-        <h3><i class="fas fa-users"></i> Create New Group</h3>
-        <div class="group-form">
+        <h3 id="group-modal-title"><i class="fas fa-users"></i> Create New Group</h3>
+        
+        <!-- Create Group Form -->
+        <div class="group-form" id="create-group-form">
             <input type="text" id="group-name-input" placeholder="Group Name" maxlength="50">
             <div class="member-selection" id="member-selection">
                 {% for friend in friends_list %}
@@ -508,10 +586,23 @@
                 <button class="cancel-group-btn" id="cancel-group-btn">Cancel</button>
             </div>
         </div>
+        
+        <!-- Edit Group Form -->
+        <div class="group-form" id="edit-group-form" style="display: none;">
+            <input type="text" id="edit-group-name-input" placeholder="Group Name" maxlength="50">
+            <div class="group-members-list" id="group-members-list">
+                <!-- Members will be dynamically added here -->
+            </div>
+            <div class="group-actions">
+                <button class="create-group-submit" id="save-group-btn">Save Changes</button>
+                <button class="leave-group-btn" id="leave-group-btn">Leave Group</button>
+                <button class="cancel-group-btn" id="cancel-edit-group-btn">Cancel</button>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Video Call Modal (keeping existing) -->
+<!-- Video Call Modal -->
 <div class="call-modal" id="call-modal">
     <div class="call-content">
         <div class="call-header">
@@ -583,7 +674,7 @@
     const socket = io();
     const username = "{{ username }}";
     let currentRoom = null;
-    let currentRoomType = 'direct'; // 'direct' or 'group'
+    let currentRoomType = 'direct';
     let isLoadingHistory = false;
     let userStatus = 'offline';
     let typingTimeout = null;
@@ -593,6 +684,8 @@
     let hasMoreMessages = true;
     let isLoadingMore = false;
     let pendingMediaFile = null;
+    let userProfiles = {};
+    let currentGroupInfo = null;
     
     // WebRTC variables
     let localStream = null;
@@ -608,6 +701,7 @@
         ]
     };
     
+    // DOM Elements
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menu-toggle');
     const closeSidebarButton = document.getElementById('close-sidebar-button');
@@ -623,9 +717,18 @@
     const contactSearch = document.getElementById('contact-search');
     const createGroupBtn = document.getElementById('create-group-btn');
     const groupModal = document.getElementById('group-modal');
+    const groupModalTitle = document.getElementById('group-modal-title');
+    const createGroupForm = document.getElementById('create-group-form');
+    const editGroupForm = document.getElementById('edit-group-form');
     const cancelGroupBtn = document.getElementById('cancel-group-btn');
+    const cancelEditGroupBtn = document.getElementById('cancel-edit-group-btn');
     const createGroupSubmit = document.getElementById('create-group-submit');
     const groupNameInput = document.getElementById('group-name-input');
+    const editGroupNameInput = document.getElementById('edit-group-name-input');
+    const saveGroupBtn = document.getElementById('save-group-btn');
+    const leaveGroupBtn = document.getElementById('leave-group-btn');
+    const groupMembersList = document.getElementById('group-members-list');
+    const editGroupBtn = document.getElementById('edit-group-btn');
     const mediaPreviewModal = document.getElementById('media-preview-modal');
     const mediaPreviewContainer = document.getElementById('media-preview-container');
     const sendMediaBtn = document.getElementById('send-media-btn');
@@ -673,6 +776,7 @@
     menuToggle.addEventListener('click', () => {
         sidebar.classList.add('active');
     });
+    
     closeSidebarButton.addEventListener('click', () => {
         sidebar.classList.remove('active');
     });
@@ -694,12 +798,19 @@
 
     // Create group functionality
     createGroupBtn.addEventListener('click', () => {
+        groupModalTitle.textContent = 'Create New Group';
+        createGroupForm.style.display = 'flex';
+        editGroupForm.style.display = 'none';
         groupModal.classList.add('active');
         groupNameInput.value = '';
         document.querySelectorAll('#member-selection input[type="checkbox"]').forEach(cb => cb.checked = false);
     });
 
     cancelGroupBtn.addEventListener('click', () => {
+        groupModal.classList.remove('active');
+    });
+
+    cancelEditGroupBtn.addEventListener('click', () => {
         groupModal.classList.remove('active');
     });
 
@@ -736,7 +847,6 @@
                 showOverlay(data.error);
             } else {
                 groupModal.classList.remove('active');
-                // Add group to list
                 const groupLi = document.createElement('li');
                 groupLi.setAttribute('data-room-id', data.group_id);
                 groupLi.setAttribute('data-room-type', 'group');
@@ -753,6 +863,200 @@
         } catch (error) {
             console.error('Error creating group:', error);
             showOverlay('Failed to create group');
+        }
+    });
+
+    // Edit group functionality
+    editGroupBtn.addEventListener('click', async () => {
+        if (!currentRoom || !currentRoom.startsWith('group_')) return;
+        
+        try {
+            const response = await fetch(`/get_group_info/${currentRoom}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                showOverlay(data.error);
+                return;
+            }
+            
+            currentGroupInfo = data;
+            groupModalTitle.textContent = 'Edit Group';
+            createGroupForm.style.display = 'none';
+            editGroupForm.style.display = 'flex';
+            editGroupNameInput.value = data.name;
+            editGroupNameInput.disabled = !data.is_creator;
+            
+            // Show members
+            groupMembersList.innerHTML = '';
+            data.members.forEach(member => {
+                const memberDiv = document.createElement('div');
+                memberDiv.classList.add('group-member-item');
+                
+                const memberInfo = document.createElement('div');
+                memberInfo.classList.add('member-info');
+                
+                const avatar = document.createElement('div');
+                avatar.classList.add('member-avatar');
+                if (member.profile_picture) {
+                    const img = document.createElement('img');
+                    img.src = member.profile_picture;
+                    avatar.appendChild(img);
+                } else {
+                    avatar.textContent = member.username[0].toUpperCase();
+                }
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = member.username;
+                if (member.username === data.creator) {
+                    const badge = document.createElement('span');
+                    badge.classList.add('creator-badge');
+                    badge.textContent = 'CREATOR';
+                    nameSpan.appendChild(badge);
+                }
+                
+                memberInfo.appendChild(avatar);
+                memberInfo.appendChild(nameSpan);
+                memberDiv.appendChild(memberInfo);
+                
+                // Add kick button for creator
+                if (data.is_creator && member.username !== data.creator) {
+                    const kickBtn = document.createElement('button');
+                    kickBtn.classList.add('kick-btn');
+                    kickBtn.innerHTML = '<i class="fas fa-user-times"></i> Kick';
+                    kickBtn.onclick = () => kickMember(member.username);
+                    memberDiv.appendChild(kickBtn);
+                }
+                
+                groupMembersList.appendChild(memberDiv);
+            });
+            
+            // Show/hide leave button
+            leaveGroupBtn.style.display = data.is_creator ? 'none' : 'block';
+            
+            groupModal.classList.add('active');
+        } catch (error) {
+            console.error('Error loading group info:', error);
+            showOverlay('Failed to load group info');
+        }
+    });
+
+    async function kickMember(memberUsername) {
+        if (!confirm(`Are you sure you want to kick ${memberUsername} from the group?`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/update_group/${currentRoom}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'kick',
+                    member: memberUsername
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                showOverlay(data.error);
+            } else {
+                showOverlay(`${memberUsername} has been kicked from the group`);
+                groupModal.classList.remove('active');
+                socket.emit('user_kicked_from_group', {
+                    room: currentRoom,
+                    kicked_user: memberUsername
+                });
+            }
+        } catch (error) {
+            console.error('Error kicking member:', error);
+            showOverlay('Failed to kick member');
+        }
+    }
+
+    saveGroupBtn.addEventListener('click', async () => {
+        if (!currentGroupInfo || !currentGroupInfo.is_creator) return;
+        
+        const newName = editGroupNameInput.value.trim();
+        if (!newName) {
+            showOverlay('Group name cannot be empty');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/update_group/${currentRoom}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'rename',
+                    name: newName
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                showOverlay(data.error);
+            } else {
+                currentChatHeader.textContent = newName;
+                const groupLi = friendListUl.querySelector(`li[data-room-id="${currentRoom}"]`);
+                if (groupLi) {
+                    groupLi.setAttribute('data-room-name', newName);
+                    groupLi.querySelector('span').innerHTML = `${newName} <span class="group-indicator">GROUP</span>`;
+                }
+                groupModal.classList.remove('active');
+                showOverlay('Group renamed successfully');
+                socket.emit('group_renamed', {
+                    room: currentRoom,
+                    new_name: newName
+                });
+            }
+        } catch (error) {
+            console.error('Error renaming group:', error);
+            showOverlay('Failed to rename group');
+        }
+    });
+
+    leaveGroupBtn.addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to leave this group?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/update_group/${currentRoom}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'leave'
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                showOverlay(data.error);
+            } else {
+                const groupLi = friendListUl.querySelector(`li[data-room-id="${currentRoom}"]`);
+                if (groupLi) {
+                    groupLi.remove();
+                }
+                
+                groupModal.classList.remove('active');
+                currentRoom = null;
+                chatMessagesDiv.innerHTML = '';
+                currentChatHeader.textContent = '';
+                editGroupBtn.style.display = 'none';
+                callIcons.style.display = 'none';
+                showOverlay('You have left the group');
+            }
+        } catch (error) {
+            console.error('Error leaving group:', error);
+            showOverlay('Failed to leave group');
         }
     });
 
@@ -807,10 +1111,11 @@
             selectChatPrompt.style.display = 'none';
         }
         
-        // Hide call buttons for group chats
         if (roomType === 'group') {
-            callIcons.style.display = 'none';
+            editGroupBtn.style.display = 'inline';
+            callIcons.style.display = 'flex';
         } else {
+            editGroupBtn.style.display = 'none';
             callIcons.style.display = 'flex';
         }
         
@@ -847,6 +1152,7 @@
         }
         
         callIcons.style.display = 'flex';
+        editGroupBtn.style.display = 'none';
         cancelReply();
     }
 
@@ -894,16 +1200,29 @@
 
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('message-avatar');
-        avatarDiv.textContent = msg.username[0].toUpperCase();
+        
+        if (userProfiles[msg.username] && userProfiles[msg.username].profile_picture) {
+            const img = document.createElement('img');
+            img.src = userProfiles[msg.username].profile_picture;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.borderRadius = '50%';
+            img.style.objectFit = 'cover';
+            avatarDiv.appendChild(img);
+        } else {
+            avatarDiv.textContent = msg.username[0].toUpperCase();
+        }
 
         const contentDiv = document.createElement('div');
         contentDiv.classList.add('message-content');
 
-        const senderSpan = document.createElement('div');
-        senderSpan.classList.add('message-sender');
-        senderSpan.textContent = msg.username;
+        if (currentRoomType === 'group' || msg.username !== username) {
+            const senderSpan = document.createElement('div');
+            senderSpan.classList.add('message-sender');
+            senderSpan.textContent = msg.username;
+            contentDiv.appendChild(senderSpan);
+        }
 
-        // Add reply context if present
         if (msg.reply_to) {
             const replyContext = document.createElement('div');
             replyContext.classList.add('message-reply-context');
@@ -929,9 +1248,6 @@
         timeSpan.classList.add('message-time');
         timeSpan.textContent = msg.time;
 
-        if (msg.username !== username) {
-            contentDiv.appendChild(senderSpan);
-        }
         contentDiv.appendChild(textSpan);
         contentDiv.appendChild(timeSpan);
 
@@ -1024,7 +1340,6 @@
         }
     }
 
-    // Infinite scroll for messages
     chatMessagesDiv.addEventListener('scroll', async () => {
         if (chatMessagesDiv.scrollTop === 0 && hasMoreMessages && !isLoadingMore) {
             await loadMoreMessages();
@@ -1056,11 +1371,13 @@
             loadingDiv.remove();
             
             if (data.messages && data.messages.length > 0) {
+                const usersInMessages = [...new Set(data.messages.map(msg => msg.username))];
+                await loadUserProfiles(usersInMessages);
+                
                 data.messages.forEach(msg => addMessage(msg, true));
                 messageOffset += data.messages.length;
                 hasMoreMessages = data.has_more;
                 
-                // Maintain scroll position
                 const scrollHeightAfter = chatMessagesDiv.scrollHeight;
                 chatMessagesDiv.scrollTop = scrollHeightAfter - scrollHeightBefore;
             } else {
@@ -1081,7 +1398,6 @@
         messageOffset = 0;
         hasMoreMessages = true;
         
-        // Set header based on room type
         if (roomName.startsWith('group_')) {
             const groupLi = friendListUl.querySelector(`li[data-room-id="${roomName}"]`);
             if (groupLi) {
@@ -1100,8 +1416,12 @@
                 currentRoom = null;
                 currentChatHeader.textContent = "Error loading chat.";
                 callIcons.style.display = 'none';
+                editGroupBtn.style.display = 'none';
                 return;
             }
+            
+            const usersInChat = [...new Set(data.messages.map(msg => msg.username))];
+            await loadUserProfiles(usersInChat);
             
             data.messages.forEach(msg => addMessage(msg));
             messageOffset = data.messages.length;
@@ -1113,8 +1433,33 @@
             currentRoom = null;
             currentChatHeader.textContent = "Error loading chat.";
             callIcons.style.display = 'none';
+            editGroupBtn.style.display = 'none';
         } finally {
             isLoadingHistory = false;
+        }
+    }
+
+    async function loadUserProfiles(usernames) {
+        try {
+            const response = await fetch('/get_user_profiles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ usernames })
+            });
+            
+            const profiles = await response.json();
+            userProfiles = { ...userProfiles, ...profiles };
+            
+            usernames.forEach(uname => {
+                const avatarContainer = document.getElementById(`avatar-${uname}`);
+                if (avatarContainer && profiles[uname] && profiles[uname].profile_picture) {
+                    avatarContainer.innerHTML = `<img src="${profiles[uname].profile_picture}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                }
+            });
+        } catch (error) {
+            console.error('Error loading user profiles:', error);
         }
     }
 
@@ -1158,7 +1503,6 @@
         }
     });
 
-    // Paste functionality for images/videos
     messageInput.addEventListener('paste', async (e) => {
         const items = e.clipboardData.items;
         for (let i = 0; i < items.length; i++) {
@@ -1171,7 +1515,6 @@
         }
     });
 
-    // Also listen for paste on document level
     document.addEventListener('paste', async (e) => {
         if (document.activeElement !== messageInput) return;
         
@@ -1351,187 +1694,6 @@
         }
     }
 
-    // Load profile pictures for friends
-    async function loadFriendProfiles() {
-        try {
-            const response = await fetch('/api/get_friend_profiles');
-            const profiles = await response.json();
-            
-            Object.keys(profiles).forEach(friendName => {
-                const avatar = document.getElementById(`avatar-${friendName}`);
-                if (avatar && profiles[friendName].profile_picture) {
-                    avatar.innerHTML = `<img src="${profiles[friendName].profile_picture}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-                }
-            });
-        } catch (error) {
-            console.error('Error loading friend profiles:', error);
-        }
-    }
-
-    // WebRTC and Socket.IO events (keeping existing implementation)
-    // ... [Include all the existing WebRTC code from the previous chat.html]
-    
-    socket.on('connect', () => {
-        console.log('Connected to Socket.IO');
-        socket.emit('user_connected');
-        userStatus = 'online';
-        socket.emit('request_statuses');
-        
-        const storedRoomType = localStorage.getItem('activeRoomType');
-        if (storedRoomType === 'group') {
-            const storedRoom = localStorage.getItem('activeRoom');
-            if (storedRoom) {
-                const groupLi = friendListUl.querySelector(`li[data-room-id="${storedRoom}"]`);
-                if (groupLi) {
-                    selectRoom(storedRoom, 'group', groupLi.dataset.roomName, groupLi);
-                }
-            }
-        } else {
-            const storedFriend = localStorage.getItem('activeFriend');
-            if (storedFriend) {
-                selectFriend(storedFriend);
-            }
-        }
-    });
-
-    socket.on('message', (data) => {
-        if (data.room === currentRoom) {
-            addMessage(data);
-            scrollToBottom();
-        }
-    });
-
-    socket.on('message_updated', (data) => {
-        if (data.room === currentRoom) {
-            const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
-                                        ? data.new_text
-                                        : `${data.new_text} <em>(edited)</em>`;
-            updateMessage(data.id, newTextWithEditedTag);
-            scrollToBottom();
-        }
-    });
-
-    socket.on('error', (data) => {
-        console.error('Socket Error:', data.message);
-        showOverlay(data.message);
-        if (data.message.includes('not friends') || data.message.includes('blocked') || data.message.includes('Unauthorized') || data.message.includes('not a member')) {
-            currentRoom = null;
-            chatMessagesDiv.innerHTML = '';
-            currentChatHeader.textContent = "";
-            callIcons.style.display = 'none';
-            if (selectChatPrompt) {
-                selectChatPrompt.style.display = 'block';
-                selectChatPrompt.textContent = "Select a friend or group from the sidebar to start chatting.";
-            }
-        }
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Disconnected from Socket.IO');
-        socket.emit('user_disconnected');
-        showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
-    });
-
-    socket.on('user_status_update', (data) => {
-        updateFriendStatus(data.username, data.status);
-    });
-
-    socket.on('user_typing', (data) => {
-        showTypingIndicator(data.username, data.is_typing);
-    });
-
-    socket.on('all_statuses', (data) => {
-        Object.keys(data).forEach(username => {
-            updateFriendStatus(username, data[username].status);
-        });
-    });
-
-    // WebRTC Call Events
-    socket.on('incoming_call', (data) => {
-        incomingCallData = data;
-        document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
-        document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
-        incomingCallModal.classList.add('active');
-    });
-
-    socket.on('call_answered', async (data) => {
-        callStatus.textContent = 'Connecting...';
-        await createPeerConnection();
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socket.emit('webrtc_offer', {
-            room: currentRoom,
-            offer: offer
-        });
-        const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
-        logCallToChat(currentCallType, 'started', otherUser);
-    });
-
-    socket.on('call_rejected', (data) => {
-        showOverlay(`${data.rejecter} rejected your call.`);
-        closeCall();
-    });
-
-    socket.on('call_ended', (data) => {
-        showOverlay('Call ended.');
-        closeCall();
-    });
-
-    socket.on('webrtc_offer', async (data) => {
-        if (!peerConnection) {
-            await createPeerConnection();
-        }
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        socket.emit('webrtc_answer', {
-            room: currentRoom,
-            answer: answer
-        });
-    });
-
-    socket.on('webrtc_answer', async (data) => {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-    });
-
-    socket.on('webrtc_ice_candidate', async (data) => {
-        if (peerConnection && data.candidate) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-        }
-    });
-
-    function updateFriendStatus(username, status) {
-        const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
-        if (statusIndicator) {
-            statusIndicator.className = 'status-indicator';
-            statusIndicator.classList.add(status);
-        }
-        connectedUsers[username] = status;
-    }
-
-    function showTypingIndicator(username, isTyping) {
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (isTyping) {
-            if (!typingIndicator) {
-                const indicator = document.createElement('div');
-                indicator.id = 'typing-indicator';
-                indicator.className = 'typing-indicator';
-                indicator.innerHTML = `
-                    <span>${username}</span>
-                    <span>is typing</span>
-                    <span>...</span>
-                `;
-                chatMessagesDiv.appendChild(indicator);
-                scrollToBottom();
-            }
-        } else {
-            const existingIndicator = document.getElementById('typing-indicator');
-            if (existingIndicator) {
-                existingIndicator.remove();
-            }
-        }
-    }
-
     // WebRTC Functions
     async function loadAvailableDevices() {
         try {
@@ -1628,21 +1790,21 @@
             message = `Missed ${callType === 'video' ? 'video' : 'audio'} call from ${otherUser}`;
         }
         addSystemMessage(message, icon);
-        const messageId = `system_${Date.now()}`;
-        const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        socket.emit('send_message', {
-            username: 'System',
-            room: currentRoom,
-            msg: `<em>${message}</em>`
-        });
     }
 
     async function startCall(callType) {
-        if (!currentRoom || currentRoomType === 'group') {
-            showOverlay("Calls are only available for direct messages.");
+        if (!currentRoom) {
+            showOverlay("Please select a friend or group to call.");
             return;
         }
-        const receiver = currentRoom.replace(username + '-', '').replace('-' + username, '');
+        
+        let receiver;
+        if (currentRoomType === 'group') {
+            receiver = currentRoom;
+        } else {
+            receiver = currentRoom.replace(username + '-', '').replace('-' + username, '');
+        }
+        
         try {
             currentCallType = callType;
             const constraints = {
@@ -1867,6 +2029,174 @@
     callModal.addEventListener('click', (e) => {
         if (isCallMinimized && e.target === callModal) {
             toggleMinimizeCall();
+        }
+    });
+
+    // Socket.IO Events
+    socket.on('connect', () => {
+        console.log('Connected to Socket.IO');
+        socket.emit('user_connected');
+        userStatus = 'online';
+        socket.emit('request_statuses');
+        
+        const friendUsernames = Array.from(friendListUl.querySelectorAll('li[data-friend-username]'))
+            .map(li => li.dataset.friendUsername);
+        if (friendUsernames.length > 0) {
+            loadUserProfiles(friendUsernames);
+        }
+        
+        const storedRoomType = localStorage.getItem('activeRoomType');
+        if (storedRoomType === 'group') {
+            const storedRoom = localStorage.getItem('activeRoom');
+            if (storedRoom) {
+                const groupLi = friendListUl.querySelector(`li[data-room-id="${storedRoom}"]`);
+                if (groupLi) {
+                    selectRoom(storedRoom, 'group', groupLi.dataset.roomName, groupLi);
+                }
+            }
+        } else {
+            const storedFriend = localStorage.getItem('activeFriend');
+            if (storedFriend) {
+                selectFriend(storedFriend);
+            }
+        }
+    });
+
+    socket.on('message', (data) => {
+        if (data.room === currentRoom) {
+            if (!userProfiles[data.username]) {
+                loadUserProfiles([data.username]);
+            }
+            addMessage(data);
+            scrollToBottom();
+        }
+    });
+
+    socket.on('message_updated', (data) => {
+        if (data.room === currentRoom) {
+            const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
+                                        ? data.new_text
+                                        : `${data.new_text} <em>(edited)</em>`;
+            updateMessage(data.id, newTextWithEditedTag);
+            scrollToBottom();
+        }
+    });
+
+    socket.on('error', (data) => {
+        console.error('Socket Error:', data.message);
+        showOverlay(data.message);
+        if (data.message.includes('not friends') || data.message.includes('blocked') || 
+            data.message.includes('Unauthorized') || data.message.includes('not a member')) {
+            currentRoom = null;
+            chatMessagesDiv.innerHTML = '';
+            currentChatHeader.textContent = "";
+            callIcons.style.display = 'none';
+            editGroupBtn.style.display = 'none';
+            if (selectChatPrompt) {
+                selectChatPrompt.style.display = 'block';
+                selectChatPrompt.textContent = "Select a friend or group from the sidebar to start chatting.";
+            }
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from Socket.IO');
+        socket.emit('user_disconnected');
+        showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
+    });
+
+    socket.on('user_status_update', (data) => {
+        const statusIndicator = document.querySelector(`.status-indicator[data-username="${data.username}"]`);
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator';
+            statusIndicator.classList.add(data.status);
+        }
+        connectedUsers[data.username] = data.status;
+    });
+
+    socket.on('user_typing', (data) => {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (data.is_typing) {
+            if (!typingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.className = 'typing-indicator';
+                indicator.innerHTML = `
+                    <span>${data.username}</span>
+                    <span>is typing</span>
+                    <span>...</span>
+                `;
+                chatMessagesDiv.appendChild(indicator);
+                scrollToBottom();
+            }
+        } else {
+            const existingIndicator = document.getElementById('typing-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+        }
+    });
+
+    socket.on('all_statuses', (data) => {
+        Object.keys(data).forEach(username => {
+            const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
+            if (statusIndicator) {
+                statusIndicator.className = 'status-indicator';
+                statusIndicator.classList.add(data[username].status);
+            }
+        });
+    });
+
+    socket.on('incoming_call', (data) => {
+        incomingCallData = data;
+        document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
+        document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
+        incomingCallModal.classList.add('active');
+    });
+
+    socket.on('call_answered', async (data) => {
+        callStatus.textContent = 'Connecting...';
+        await createPeerConnection();
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('webrtc_offer', {
+            room: currentRoom,
+            offer: offer
+        });
+        const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
+        logCallToChat(currentCallType, 'started', otherUser);
+    });
+
+    socket.on('call_rejected', (data) => {
+        showOverlay(`${data.rejecter} rejected your call.`);
+        closeCall();
+    });
+
+    socket.on('call_ended', (data) => {
+        showOverlay('Call ended.');
+        closeCall();
+    });
+
+    socket.on('webrtc_offer', async (data) => {
+        if (!peerConnection) {
+            await createPeerConnection();
+        }
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('webrtc_answer', {
+            room: currentRoom,
+            answer: answer
+        });
+    });
+
+    socket.on('webrtc_answer', async (data) => {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    });
+
+    socket.on('webrtc_ice_candidate', async (data) => {
+        if (peerConnection && data.candidate) {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     });
 
