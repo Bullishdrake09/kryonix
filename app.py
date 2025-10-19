@@ -740,6 +740,122 @@ def create_group():
         app.logger.error(f"Error creating group: {e}")
         return jsonify({'error': 'Failed to create group'}), 500
 
+@app.route('/get_group_info/<group_id>', methods=['GET'])
+@login_required
+def get_group_info(group_id):
+    try:
+        group_chats = load_group_chats()
+        if group_id not in group_chats:
+            return jsonify({'error': 'Group not found'}), 404
+        
+        group = group_chats[group_id]
+        if current_user.username not in group.get('members', []):
+            return jsonify({'error': 'You are not a member of this group'}), 403
+        
+        # Get profile pictures for members
+        all_users = load_all_users_data()
+        members_info = []
+        for member in group.get('members', []):
+            if member in all_users:
+                members_info.append({
+                    'username': member,
+                    'profile_picture': all_users[member].get('profile_picture')
+                })
+        
+        return jsonify({
+            'name': group.get('name'),
+            'creator': group.get('creator'),
+            'members': members_info,
+            'is_creator': current_user.username == group.get('creator')
+        })
+    except Exception as e:
+        app.logger.error(f"Error getting group info: {e}")
+        return jsonify({'error': 'Failed to get group info'}), 500
+
+@app.route('/update_group/<group_id>', methods=['POST'])
+@login_required
+def update_group(group_id):
+    try:
+        data = request.get_json()
+        action = data.get('action')
+        
+        group_chats = load_group_chats()
+        if group_id not in group_chats:
+            return jsonify({'error': 'Group not found'}), 404
+        
+        group = group_chats[group_id]
+        
+        if current_user.username not in group.get('members', []):
+            return jsonify({'error': 'You are not a member of this group'}), 403
+        
+        if action == 'rename':
+            if current_user.username != group.get('creator'):
+                return jsonify({'error': 'Only the group creator can rename the group'}), 403
+            
+            new_name = data.get('name', '').strip()
+            if not new_name:
+                return jsonify({'error': 'Group name is required'}), 400
+            
+            group['name'] = new_name
+            if save_group_chats(group_chats):
+                return jsonify({'success': True, 'name': new_name})
+            return jsonify({'error': 'Failed to rename group'}), 500
+        
+        elif action == 'kick':
+            if current_user.username != group.get('creator'):
+                return jsonify({'error': 'Only the group creator can kick members'}), 403
+            
+            member_to_kick = data.get('member')
+            if not member_to_kick:
+                return jsonify({'error': 'Member username is required'}), 400
+            
+            if member_to_kick == group.get('creator'):
+                return jsonify({'error': 'Cannot kick the group creator'}), 400
+            
+            if member_to_kick in group['members']:
+                group['members'].remove(member_to_kick)
+                if save_group_chats(group_chats):
+                    return jsonify({'success': True})
+                return jsonify({'error': 'Failed to kick member'}), 500
+            return jsonify({'error': 'Member not in group'}), 400
+        
+        elif action == 'leave':
+            if current_user.username == group.get('creator'):
+                return jsonify({'error': 'Group creator cannot leave. Delete the group instead.'}), 403
+            
+            if current_user.username in group['members']:
+                group['members'].remove(current_user.username)
+                if save_group_chats(group_chats):
+                    return jsonify({'success': True})
+                return jsonify({'error': 'Failed to leave group'}), 500
+            return jsonify({'error': 'You are not in this group'}), 400
+        
+        return jsonify({'error': 'Invalid action'}), 400
+    except Exception as e:
+        app.logger.error(f"Error updating group: {e}")
+        return jsonify({'error': 'Failed to update group'}), 500
+
+@app.route('/get_user_profiles', methods=['POST'])
+@login_required
+def get_user_profiles():
+    try:
+        data = request.get_json()
+        usernames = data.get('usernames', [])
+        
+        all_users = load_all_users_data()
+        profiles = {}
+        
+        for username in usernames:
+            if username in all_users:
+                profiles[username] = {
+                    'profile_picture': all_users[username].get('profile_picture')
+                }
+        
+        return jsonify(profiles)
+    except Exception as e:
+        app.logger.error(f"Error getting user profiles: {e}")
+        return jsonify({'error': 'Failed to get profiles'}), 500
+
 @app.route('/friends', methods=['GET', 'POST'])
 @login_required
 def friends():
@@ -1657,4 +1773,4 @@ if __name__ == '__main__':
         print("Admin user created with username 'admin' and password 'admin'")
         print("!!! IMPORTANT: Change admin password immediately in app.py for production !!!")
 
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True, host="0.0.0.0", port=5000)
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True, host="0.0.0.0", port=5001)
