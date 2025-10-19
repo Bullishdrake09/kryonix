@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}My App{% endblock %}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js  "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js    "></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         /* Dynamic styles for theme colors */
@@ -20,56 +20,85 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* Changed to dark blue gradient */
-            background: linear-gradient(135deg, #0d0d1a, #0f0c29, #24243e, #0d0d1a);
-            z-index: 9999; /* Very high z-index to cover everything */
+            background: linear-gradient(135deg, #0f0a2e, #1a0a3c, #2d0a5a, #1a0a3c);
+            z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
-            opacity: 1; /* Starts fully opaque */
-            visibility: visible; /* Starts visible */
-            /* Transition for fade out - Increased duration */
-            transition: opacity 1.0s ease 0.4s, visibility 1.0s ease 1.4s; /* Fade-out takes 1.0s after 0.4s delay, visibility delayed further */
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 1.5s cubic-bezier(0.23, 1, 0.32, 1), visibility 1.5s ease 1.9s;
         }
 
         #page-transition-overlay.inactive {
             opacity: 0;
             visibility: hidden;
-            pointer-events: none; /* Add this line */
+            pointer-events: none;
         }
 
         #page-transition-overlay .logo {
-            color: white; /* White text */
-            font-size: 3rem; /* Adjust size as needed */
+            color: white;
+            font-size: 4rem;
             font-weight: bold;
-            text-transform: uppercase; /* Makes "KRYONIX" uppercase */
-            letter-spacing: 4px; /* Adds space between letters */
-            /* Initial state for text animation */
+            text-transform: uppercase;
+            letter-spacing: 6px;
             opacity: 0;
-            transform: scale(0.8);
-            /* Transition for text animation - Increased duration */
-            transition: opacity 0.5s ease, transform 0.5s ease;
+            transform: scale(0.5) rotateX(90deg);
+            transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            text-shadow: 0 0 15px rgba(128, 0, 255, 0.7);
         }
 
-        /* Active state for the logo text animation (happens immediately when overlay is shown) */
+        #page-transition-overlay .logo::before {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            color: transparent;
+            background: linear-gradient(90deg, #8a2be2, #4b0082, #0000ff, #1e90ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 300% 300%;
+            animation: shine 3s infinite;
+            z-index: -1;
+            filter: blur(1px);
+            opacity: 0.7;
+        }
+
+        /* Active state for the logo text animation */
         #page-transition-overlay:not(.inactive) .logo {
             opacity: 1;
-            transform: scale(1);
-            /* Add a slight delay to the text animation to make it feel less abrupt - Increased delay */
-            transition: opacity 0.5s ease 0.2s, transform 0.5s ease 0.2s; /* Text animation delay increased */
+            transform: scale(1) rotateX(0);
+            transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
         }
 
-        /* Optional: Add a subtle animation to the background gradient itself */
+        /* Enhanced background animation */
         #page-transition-overlay {
+            background: radial-gradient(circle at center, #1a0a3c 0%, #0f0a2e 40%, #0d0d1a 100%);
             background-size: 400% 400%;
-            animation: gradientBGOverlay 15s ease infinite;
+            animation: gradientBGOverlay 8s ease infinite, pulseGlow 4s ease-in-out infinite;
         }
 
         @keyframes gradientBGOverlay {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: inset 0 0 50px rgba(75, 0, 130, 0.5); }
+            50% { box-shadow: inset 0 0 100px rgba(128, 0, 255, 0.7); }
+            100% { box-shadow: inset 0 0 50px rgba(75, 0, 130, 0.5); }
+        }
+
+        @keyframes shine {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
+
         /* --- End Page Transition Overlay Styles --- */
 
     </style>
@@ -78,7 +107,7 @@
 <body>
     <!-- Add the overlay div here -->
     <div id="page-transition-overlay">
-        <div class="logo">KRYONIX</div>
+        <div class="logo" data-text="KRYONIX">KRYONIX</div>
     </div>
 
     {% block content %}{% endblock %}
@@ -90,35 +119,25 @@
 
         // Handle link clicks
         document.body.addEventListener('click', function(event) {
-            // Find the closest link element
             const link = event.target.closest('a');
             if (link && link.href && !link.target && !link.hasAttribute('download')) {
-                event.preventDefault(); // Stop the default navigation
+                event.preventDefault();
 
-                // Ensure the overlay is visible and reset its state for fade-in
+                // Ensure the overlay is visible and reset its state
                 pageTransitionOverlay.classList.remove('inactive');
-                // Reset logo animation state (optional, as CSS handles it on visibility)
-                // pageTransitionOverlay.classList.add('active'); // Not needed if :not(.inactive) handles logo
-
-                // Wait for the fade-in and logo animation to complete
-                // Total time: logo delay (0.2s) + logo animation (0.5s) + overlay delay (0.4s) + overlay fade-out (1.0s) = 2.1s
-                // Let's use a slightly longer timeout to be safe.
+                
+                // Navigate after animation completes
                 setTimeout(function() {
-                    window.location.href = link.href; // Navigate to the new page
-                }, 2200); // Increased timeout to match longer animation
+                    window.location.href = link.href;
+                }, 2700); // Increased timeout for longer animation
             }
         });
 
-        // On the *new* page load, the overlay will initially be active (visible, opaque).
-        // We need to fade it out *after* the page content has loaded and is visible.
-        // Using requestAnimationFrame and a short delay helps ensure the page paints first.
+        // Fade out overlay on new page load
         requestAnimationFrame(() => {
              setTimeout(() => {
-                 // Add the 'inactive' class to trigger the fade-out transition
                  pageTransitionOverlay.classList.add('inactive');
-                 // Optional: Remove the overlay entirely after fade-out if desired
-                 // setTimeout(() => pageTransitionOverlay.remove(), 1400); // Match CSS transition + delay time (1.0s + 0.4s)
-             }, 10); // Small delay after rAF to allow rendering
+             }, 10);
         });
 
     });
