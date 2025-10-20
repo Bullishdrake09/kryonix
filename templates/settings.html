@@ -16,7 +16,7 @@
         {% if message %}
             <div class="alert alert-{{ message_type }}">{{ message }}</div>
         {% endif %}
-        
+        <a href="{{ url_for('chat') }}" class="back-button">< Back</a>
         <!-- Profile Picture Section -->
         <div class="section">
             <h3>Profile Picture</h3>
@@ -79,33 +79,6 @@
                 </div>
                 
                 <button type="submit" class="button">Save Account Settings</button>
-            </form>
-        </div>
-        
-        <!-- Theme Settings Section -->
-        <div class="section">
-            <h3>Theme Settings</h3>
-            <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="section" value="theme">
-                
-                <div class="form-group">
-                    <label for="primary_color">Primary Color:</label>
-                    <div class="color-picker-wrapper">
-                        <input type="color" id="primary_color" name="primary_color" value="{{ settings['primary_color'] }}">
-                        <span class="color-preview" style="background-color: {{ settings['primary_color'] }};"></span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="accent_color">Accent Color:</label>
-                    <div class="color-picker-wrapper">
-                        <input type="color" id="accent_color" name="accent_color" value="{{ settings['accent_color'] }}">
-                        <span class="color-preview" style="background-color: {{ settings['accent_color'] }};"></span>
-                    </div>
-                </div>
-                
-                <button type="submit" class="button">Save Theme</button>
             </form>
         </div>
         
