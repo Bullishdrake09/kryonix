@@ -1,17 +1,67 @@
 {% extends "base.html" %}
-
 {% block title %}Kryonix Chat - {{ username }}{% endblock %}
-
 {% block content %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
 <style>
+/* Character Counter */
+.char-counter {
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    font-size: 0.75rem;
+    color: var(--gray);
+    background: var(--darker);
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.char-counter.visible {
+    opacity: 1;
+}
+.char-counter.warning {
+    color: #ff9800;
+}
+.char-counter.error {
+    color: var(--danger);
+}
+/* Message Actions - Hidden by default, show on hover */
+.message-actions {
+    opacity: 0;
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    transition: opacity 0.2s;
+}
+.message:hover .message-actions {
+    opacity: 1;
+}
+.message-actions button {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--light);
+}
+.message-actions button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+.message-actions button.reply-btn {
+    background: rgba(138, 43, 226, 0.2);
+    color: #8a2be2;
+}
+.message-actions button.reply-btn:hover {
+    background: rgba(138, 43, 226, 0.4);
+}
 /* Search Bar Styles */
 .search-container {
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
 }
-
 .search-input {
     width: 100%;
     padding: 8px 12px;
@@ -22,11 +72,9 @@
     outline: none;
     font-size: 0.9rem;
 }
-
 .search-input:focus {
     border-color: var(--primary);
 }
-
 /* Create Group Button */
 .create-group-btn {
     width: 100%;
@@ -41,11 +89,9 @@
     cursor: pointer;
     transition: background 0.2s;
 }
-
 .create-group-btn:hover {
     background: var(--primary-dark);
 }
-
 /* Group Chat Indicator */
 .group-indicator {
     background: var(--primary);
@@ -56,7 +102,6 @@
     margin-left: 8px;
     font-weight: 600;
 }
-
 /* Media Preview Modal */
 .media-preview-modal {
     display: none;
@@ -70,11 +115,9 @@
     justify-content: center;
     align-items: center;
 }
-
 .media-preview-modal.active {
     display: flex;
 }
-
 .media-preview-content {
     max-width: 90%;
     max-height: 90%;
@@ -85,7 +128,6 @@
     flex-direction: column;
     gap: 16px;
 }
-
 .media-preview-content img,
 .media-preview-content video {
     max-width: 600px;
@@ -93,13 +135,11 @@
     border-radius: 8px;
     object-fit: contain;
 }
-
 .media-preview-actions {
     display: flex;
     gap: 12px;
     justify-content: center;
 }
-
 .media-preview-actions button {
     padding: 12px 24px;
     border: none;
@@ -108,17 +148,14 @@
     cursor: pointer;
     transition: all 0.2s;
 }
-
 .send-media-btn {
     background: var(--success);
     color: var(--darker);
 }
-
 .cancel-media-btn {
     background: var(--danger);
     color: white;
 }
-
 /* Group Modal */
 .group-modal {
     display: none;
@@ -132,11 +169,9 @@
     justify-content: center;
     align-items: center;
 }
-
 .group-modal.active {
     display: flex;
 }
-
 .group-modal-content {
     background: var(--darker);
     padding: 32px;
@@ -147,18 +182,15 @@
     max-height: 80vh;
     overflow-y: auto;
 }
-
 .group-modal-content h3 {
     color: var(--light);
     margin-bottom: 24px;
 }
-
 .group-form {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
-
 .group-form input[type="text"] {
     width: 100%;
     padding: 12px;
@@ -168,11 +200,9 @@
     color: var(--light);
     outline: none;
 }
-
 .group-form input[type="text"]:focus {
     border-color: var(--primary);
 }
-
 .member-selection {
     max-height: 300px;
     overflow-y: auto;
@@ -180,7 +210,6 @@
     border-radius: 8px;
     padding: 12px;
 }
-
 .member-checkbox {
     display: flex;
     align-items: center;
@@ -189,26 +218,21 @@
     border-radius: 4px;
     transition: background 0.2s;
 }
-
 .member-checkbox:hover {
     background: var(--light-gray);
 }
-
 .member-checkbox input[type="checkbox"] {
     margin-right: 12px;
 }
-
 .member-checkbox label {
     cursor: pointer;
     color: var(--light);
 }
-
 .group-members-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
-
 .group-member-item {
     display: flex;
     align-items: center;
@@ -217,13 +241,11 @@
     background: var(--light-gray);
     border-radius: 8px;
 }
-
 .member-info {
     display: flex;
     align-items: center;
     gap: 12px;
 }
-
 .member-avatar {
     width: 40px;
     height: 40px;
@@ -236,13 +258,11 @@
     color: var(--darker);
     overflow: hidden;
 }
-
 .member-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
-
 .creator-badge {
     background: var(--primary);
     color: var(--darker);
@@ -252,8 +272,7 @@
     margin-left: 8px;
     font-weight: 600;
 }
-
-.kick-btn {
+.kick-btn, .add-member-btn {
     background: var(--danger);
     color: white;
     border: none;
@@ -263,17 +282,29 @@
     font-size: 0.85rem;
     transition: background 0.2s;
 }
-
 .kick-btn:hover {
     background: #e54d4d;
 }
-
+.add-member-btn {
+    background: var(--primary);
+    color: var(--darker);
+    width: 100%;
+    padding: 10px;
+    margin-top: 12px;
+}
+.add-member-btn:hover {
+    background: var(--primary-dark);
+}
+.add-members-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
 .group-actions {
     display: flex;
     gap: 12px;
     margin-top: 16px;
 }
-
 .group-actions button {
     flex: 1;
     padding: 12px;
@@ -283,26 +314,21 @@
     cursor: pointer;
     transition: all 0.2s;
 }
-
 .create-group-submit {
     background: var(--primary);
     color: var(--darker);
 }
-
 .cancel-group-btn {
     background: var(--light-gray);
     color: var(--light);
 }
-
 .leave-group-btn {
     background: var(--danger);
     color: white;
 }
-
 .leave-group-btn:hover {
     background: #e54d4d;
 }
-
 /* Reply UI Styles */
 .reply-preview {
     background: rgba(138, 43, 226, 0.15);
@@ -316,11 +342,9 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(138, 43, 226, 0.3);
 }
-
 .reply-preview-content {
     flex: 1;
 }
-
 .reply-preview-username {
     color: #8a2be2;
     font-size: 0.85em;
@@ -328,7 +352,6 @@
     margin-bottom: 2px;
     text-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
 }
-
 .reply-preview-text {
     color: #adb5bd;
     font-size: 0.9em;
@@ -337,7 +360,6 @@
     white-space: nowrap;
     max-width: 90%;
 }
-
 .reply-preview-close {
     background: none;
     border: none;
@@ -348,12 +370,10 @@
     margin-left: 8px;
     transition: all 0.3s ease;
 }
-
 .reply-preview-close:hover {
     color: #ff6b6b;
     transform: scale(1.1);
 }
-
 .message-reply-context {
     background: rgba(138, 43, 226, 0.1);
     border-left: 3px solid #8a2be2;
@@ -365,31 +385,26 @@
     transition: all 0.3s ease;
     border: 1px solid rgba(138, 43, 226, 0.2);
 }
-
 .message-reply-context:hover {
     background: rgba(138, 43, 226, 0.2);
     transform: translateX(3px);
     border-color: rgba(138, 43, 226, 0.4);
 }
-
 .message-reply-username {
     color: #8a2be2;
     font-weight: 700;
     margin-bottom: 2px;
     text-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
 }
-
 .message-reply-text {
     color: #adb5bd;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .message.highlighted {
     animation: highlight-pulse 1s ease-in-out;
 }
-
 @keyframes highlight-pulse {
     0%, 100% {
         background: transparent;
@@ -399,21 +414,27 @@
         box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
     }
 }
-
-.message-actions button.reply-btn {
-    background: linear-gradient(45deg, rgba(138, 43, 226, 0.2), rgba(75, 0, 130, 0.2));
-    color: #8a2be2;
-    border: 1px solid rgba(138, 43, 226, 0.3);
-    transition: all 0.3s ease;
-}
-
-.message-actions button.reply-btn:hover {
-    background: linear-gradient(45deg, #8a2be2, #4b0082);
+/* Screen Share Button */
+.share-screen-btn {
+    background: var(--success);
     color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
 }
-
+.share-screen-btn:hover {
+    background: #28a745;
+    transform: translateY(-2px);
+}
+.share-screen-btn.active {
+    background: var(--danger);
+}
 /* Loading indicator */
 .loading-messages {
     text-align: center;
@@ -421,7 +442,6 @@
     color: var(--gray);
     font-style: italic;
 }
-
 @media (max-width: 768px) {
     .group-modal-content {
         min-width: auto;
@@ -430,13 +450,11 @@
     }
 }
 </style>
-
 <div class="mobile-header" id="mobile-header">
     <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
     <h2 id="mobile-chat-title">Kryonix Chat</h2>
     <span style="visibility: hidden;"><i class="fas fa-bars"></i></span>
 </div>
-
 <div class="app-container">
     <div class="sidebar" id="sidebar">
         <button class="close-button" id="close-sidebar-button"><i class="fas fa-times"></i></button>
@@ -450,12 +468,10 @@
             </div>
             <div class="username">{{ username }}</div>
         </div>
-        
         <!-- Search Bar -->
         <div class="search-container">
             <input type="text" class="search-input" id="contact-search" placeholder="Search contacts...">
         </div>
-        
         <nav>
             <a href="{{ url_for('chat') }}">Chats</a>
             <a href="{{ url_for('friends') }}">Friends</a>
@@ -464,18 +480,15 @@
             <a href="{{ url_for('admin_page') }}">Admin Panel</a>
             {% endif %}
         </nav>
-
         <button class="create-group-btn" id="create-group-btn">
             <i class="fas fa-users"></i> Create Group
         </button>
-
         <div class="friends-list">
             <h3>Chats</h3>
             <ul id="friend-list-ul">
                 {% if not friends_list and not group_chats %}
                 <p class="initial-chat-message">Add friends to start chatting</p>
                 {% endif %}
-                
                 {% for group in group_chats %}
                 <li data-room-id="{{ group.id }}" data-room-type="group" data-room-name="{{ group.name }}">
                     <div class="friend-avatar" style="background: var(--primary);">
@@ -484,7 +497,6 @@
                     <span>{{ group.name }} <span class="group-indicator">GROUP</span></span>
                 </li>
                 {% endfor %}
-                
                 {% for friend in friends_list %}
                 <li data-friend-username="{{ friend }}" data-room-type="direct">
                     <div class="friend-avatar">
@@ -498,13 +510,11 @@
         </div>
         <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
     </div>
-
     <div class="chat-area">
         <div id="status-overlay">
             <p id="overlay-message"></p>
             <button onclick="hideOverlay()">OK</button>
         </div>
-
         <div class="chat-header">
             <h2 id="current-chat-header"></h2>
             <div class="header-links">
@@ -516,10 +526,9 @@
                         <i class="fas fa-video"></i>
                     </button>
                 </div>
-                <a href="#" id="edit-group-btn" style="display: none;">Edit Group</a>
+                <a id="edit-group-btn" style="display: none;">Edit Group</a>
             </div>
         </div>
-        
         <!-- Reply Preview Bar -->
         <div class="reply-preview" id="reply-preview" style="display: none;">
             <div class="reply-preview-content">
@@ -530,7 +539,6 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        
         <div class="chat-messages" id="chat-messages">
             {% if not friends_list and not group_chats %}
             <p class="initial-chat-message">Add friends to start chatting!</p>
@@ -538,9 +546,9 @@
             <p class="initial-chat-message" id="select-chat-prompt">Select a friend or group from the sidebar to start chatting.</p>
             {% endif %}
         </div>
-        
+        <div class="char-counter" id="char-counter">0 / {{ max_message_length }}</div>
         <div class="chat-input-area">
-            <input type="text" id="message-input" placeholder="Type a message...">
+            <input type="text" id="message-input" placeholder="Type a message..." maxlength="{{ max_message_length }}">
             <label for="file-input">
                 <i class="fas fa-paperclip"></i>
             </label>
@@ -549,7 +557,6 @@
         </div>
     </div>
 </div>
-
 <!-- Media Preview Modal -->
 <div class="media-preview-modal" id="media-preview-modal">
     <div class="media-preview-content">
@@ -564,12 +571,10 @@
         </div>
     </div>
 </div>
-
 <!-- Create/Edit Group Modal -->
 <div class="group-modal" id="group-modal">
     <div class="group-modal-content">
         <h3 id="group-modal-title"><i class="fas fa-users"></i> Create New Group</h3>
-        
         <!-- Create Group Form -->
         <div class="group-form" id="create-group-form">
             <input type="text" id="group-name-input" placeholder="Group Name" maxlength="50">
@@ -586,22 +591,31 @@
                 <button class="cancel-group-btn" id="cancel-group-btn">Cancel</button>
             </div>
         </div>
-        
         <!-- Edit Group Form -->
         <div class="group-form" id="edit-group-form" style="display: none;">
             <input type="text" id="edit-group-name-input" placeholder="Group Name" maxlength="50">
             <div class="group-members-list" id="group-members-list">
                 <!-- Members will be dynamically added here -->
             </div>
+            <!-- Add Members Section -->
+            <div class="add-members-section" id="add-members-section" style="display: none;">
+                <h4>Add Members</h4>
+                <div class="member-selection" id="add-member-selection">
+                    <!-- Available friends will be added here -->
+                </div>
+                <button class="add-member-btn" id="confirm-add-members">Add Selected Members</button>
+            </div>
             <div class="group-actions">
                 <button class="create-group-submit" id="save-group-btn">Save Changes</button>
+                <button class="add-member-btn" id="show-add-members-btn" style="display: none;">
+                    <i class="fas fa-user-plus"></i> Add Members
+                </button>
                 <button class="leave-group-btn" id="leave-group-btn">Leave Group</button>
                 <button class="cancel-group-btn" id="cancel-edit-group-btn">Cancel</button>
             </div>
         </div>
     </div>
 </div>
-
 <!-- Video Call Modal -->
 <div class="call-modal" id="call-modal">
     <div class="call-content">
@@ -626,13 +640,15 @@
             <button class="call-button mute" id="mute-video-btn" title="Turn Off Video">
                 <i class="fas fa-video"></i>
             </button>
+            <button class="call-button share" id="share-screen-btn" title="Share Screen">
+                <i class="fas fa-desktop"></i>
+            </button>
             <button class="call-button end" id="end-call-btn" title="End Call">
                 <i class="fas fa-phone-slash"></i>
             </button>
         </div>
     </div>
 </div>
-
 <!-- Device Settings Modal -->
 <div class="device-settings-modal" id="device-settings-modal">
     <h3><i class="fas fa-cog"></i> Device Settings</h3>
@@ -653,7 +669,6 @@
         <button class="cancel-settings-btn" id="cancel-settings-btn">Cancel</button>
     </div>
 </div>
-
 <!-- Incoming Call Modal -->
 <div class="incoming-call-modal" id="incoming-call-modal">
     <h3><i class="fas fa-phone" style="color: var(--primary);"></i> Incoming Call</h3>
@@ -668,11 +683,11 @@
         </button>
     </div>
 </div>
-
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
     const socket = io();
     const username = "{{ username }}";
+    const MAX_MESSAGE_LENGTH = {{ max_message_length }};
     let currentRoom = null;
     let currentRoomType = 'direct';
     let isLoadingHistory = false;
@@ -686,7 +701,8 @@
     let pendingMediaFile = null;
     let userProfiles = {};
     let currentGroupInfo = null;
-    
+    let userScrolledUp = false;
+    let isAtBottom = true;
     // WebRTC variables
     let localStream = null;
     let remoteStream = null;
@@ -694,13 +710,14 @@
     let currentCallType = null;
     let isCallActive = false;
     let incomingCallData = null;
+    let screenStream = null;
+    let isSharingScreen = false;
     const configuration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' }
         ]
     };
-    
     // DOM Elements
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menu-toggle');
@@ -733,13 +750,16 @@
     const mediaPreviewContainer = document.getElementById('media-preview-container');
     const sendMediaBtn = document.getElementById('send-media-btn');
     const cancelMediaBtn = document.getElementById('cancel-media-btn');
-    
+    const charCounter = document.getElementById('char-counter');
+    const showAddMembersBtn = document.getElementById('show-add-members-btn');
+    const addMembersSection = document.getElementById('add-members-section');
+    const addMemberSelection = document.getElementById('add-member-selection');
+    const confirmAddMembers = document.getElementById('confirm-add-members');
     // Reply elements
     const replyPreview = document.getElementById('reply-preview');
     const replyUsername = document.getElementById('reply-username');
     const replyText = document.getElementById('reply-text');
     const cancelReplyBtn = document.getElementById('cancel-reply');
-    
     // Call elements
     const callModal = document.getElementById('call-modal');
     const incomingCallModal = document.getElementById('incoming-call-modal');
@@ -750,6 +770,7 @@
     const endCallBtn = document.getElementById('end-call-btn');
     const muteAudioBtn = document.getElementById('mute-audio-btn');
     const muteVideoBtn = document.getElementById('mute-video-btn');
+    const shareScreenBtn = document.getElementById('share-screen-btn');
     const answerCallBtn = document.getElementById('answer-call-btn');
     const rejectCallBtn = document.getElementById('reject-call-btn');
     const callIcons = document.getElementById('call-icons');
@@ -771,21 +792,48 @@
         audioInput: null,
         videoInput: null
     };
-
+    // Character counter
+    messageInput.addEventListener('input', () => {
+        const length = messageInput.value.length;
+        charCounter.textContent = `${length} / ${MAX_MESSAGE_LENGTH}`;
+        if (length > 0) {
+            charCounter.classList.add('visible');
+        } else {
+            charCounter.classList.remove('visible');
+        }
+        if (length > MAX_MESSAGE_LENGTH * 0.9) {
+            charCounter.classList.add('warning');
+        } else {
+            charCounter.classList.remove('warning');
+        }
+        if (length >= MAX_MESSAGE_LENGTH) {
+            charCounter.classList.add('error');
+        } else {
+            charCounter.classList.remove('error');
+        }
+    });
+    // Detect scroll position
+    chatMessagesDiv.addEventListener('scroll', () => {
+        const threshold = 100;
+        const position = chatMessagesDiv.scrollHeight - chatMessagesDiv.scrollTop - chatMessagesDiv.clientHeight;
+        isAtBottom = position < threshold;
+        userScrolledUp = !isAtBottom;
+        // Load more messages when scrolled to top
+        if (chatMessagesDiv.scrollTop === 0 && hasMoreMessages && !isLoadingMore) {
+            loadMoreMessages();
+        }
+    });
     // Sidebar toggle functionality
     menuToggle.addEventListener('click', () => {
         sidebar.classList.add('active');
     });
-    
     closeSidebarButton.addEventListener('click', () => {
         sidebar.classList.remove('active');
     });
-
     // Contact search functionality
     contactSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const allContacts = friendListUl.querySelectorAll('li[data-friend-username], li[data-room-id]');
-        
         allContacts.forEach(contact => {
             const name = contact.querySelector('span').textContent.toLowerCase();
             if (name.includes(searchTerm)) {
@@ -795,7 +843,6 @@
             }
         });
     });
-
     // Create group functionality
     createGroupBtn.addEventListener('click', () => {
         groupModalTitle.textContent = 'Create New Group';
@@ -805,30 +852,25 @@
         groupNameInput.value = '';
         document.querySelectorAll('#member-selection input[type="checkbox"]').forEach(cb => cb.checked = false);
     });
-
     cancelGroupBtn.addEventListener('click', () => {
         groupModal.classList.remove('active');
     });
-
     cancelEditGroupBtn.addEventListener('click', () => {
         groupModal.classList.remove('active');
+        addMembersSection.style.display = 'none';
     });
-
     createGroupSubmit.addEventListener('click', async () => {
         const groupName = groupNameInput.value.trim();
         const selectedMembers = Array.from(document.querySelectorAll('#member-selection input[type="checkbox"]:checked'))
             .map(cb => cb.value);
-        
         if (!groupName) {
             showOverlay('Please enter a group name');
             return;
         }
-        
         if (selectedMembers.length < 2) {
             showOverlay('Please select at least 2 members');
             return;
         }
-        
         try {
             const response = await fetch('/create_group', {
                 method: 'POST',
@@ -840,9 +882,7 @@
                     members: selectedMembers
                 })
             });
-            
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(data.error);
             } else {
@@ -865,36 +905,32 @@
             showOverlay('Failed to create group');
         }
     });
-
     // Edit group functionality
     editGroupBtn.addEventListener('click', async () => {
         if (!currentRoom || !currentRoom.startsWith('group_')) return;
-        
         try {
             const response = await fetch(`/get_group_info/${currentRoom}`);
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(data.error);
                 return;
             }
-            
             currentGroupInfo = data;
             groupModalTitle.textContent = 'Edit Group';
             createGroupForm.style.display = 'none';
             editGroupForm.style.display = 'flex';
             editGroupNameInput.value = data.name;
             editGroupNameInput.disabled = !data.is_creator;
-            
+            addMembersSection.style.display = 'none';
+            // Show/hide add members button
+            showAddMembersBtn.style.display = data.is_creator ? 'block' : 'none';
             // Show members
             groupMembersList.innerHTML = '';
             data.members.forEach(member => {
                 const memberDiv = document.createElement('div');
                 memberDiv.classList.add('group-member-item');
-                
                 const memberInfo = document.createElement('div');
                 memberInfo.classList.add('member-info');
-                
                 const avatar = document.createElement('div');
                 avatar.classList.add('member-avatar');
                 if (member.profile_picture) {
@@ -904,7 +940,6 @@
                 } else {
                     avatar.textContent = member.username[0].toUpperCase();
                 }
-                
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = member.username;
                 if (member.username === data.creator) {
@@ -913,11 +948,9 @@
                     badge.textContent = 'CREATOR';
                     nameSpan.appendChild(badge);
                 }
-                
                 memberInfo.appendChild(avatar);
                 memberInfo.appendChild(nameSpan);
                 memberDiv.appendChild(memberInfo);
-                
                 // Add kick button for creator
                 if (data.is_creator && member.username !== data.creator) {
                     const kickBtn = document.createElement('button');
@@ -926,25 +959,84 @@
                     kickBtn.onclick = () => kickMember(member.username);
                     memberDiv.appendChild(kickBtn);
                 }
-                
                 groupMembersList.appendChild(memberDiv);
             });
-            
             // Show/hide leave button
             leaveGroupBtn.style.display = data.is_creator ? 'none' : 'block';
-            
             groupModal.classList.add('active');
         } catch (error) {
             console.error('Error loading group info:', error);
             showOverlay('Failed to load group info');
         }
     });
-
+    // Show add members section
+    showAddMembersBtn.addEventListener('click', () => {
+        if (addMembersSection.style.display === 'none') {
+            // Load available friends
+            addMemberSelection.innerHTML = '';
+            const currentMembers = currentGroupInfo.members.map(m => m.username);
+            // Get all friends from sidebar
+            const allFriends = Array.from(friendListUl.querySelectorAll('li[data-friend-username]'))
+                .map(li => li.dataset.friendUsername);
+            const availableFriends = allFriends.filter(f => !currentMembers.includes(f));
+            if (availableFriends.length === 0) {
+                addMemberSelection.innerHTML = '<p style="color: var(--gray); padding: 12px;">All your friends are already in this group</p>';
+                confirmAddMembers.disabled = true;
+            } else {
+                availableFriends.forEach(friend => {
+                    const checkbox = document.createElement('div');
+                    checkbox.classList.add('member-checkbox');
+                    checkbox.innerHTML = `
+                        <input type="checkbox" id="add-${friend}" value="${friend}">
+                        <label for="add-${friend}">${friend}</label>
+                    `;
+                    addMemberSelection.appendChild(checkbox);
+                });
+                confirmAddMembers.disabled = false;
+            }
+            addMembersSection.style.display = 'block';
+        } else {
+            addMembersSection.style.display = 'none';
+        }
+    });
+    // Confirm add members
+    confirmAddMembers.addEventListener('click', async () => {
+        const selectedMembers = Array.from(addMemberSelection.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
+        if (selectedMembers.length === 0) {
+            showOverlay('Please select at least one member to add');
+            return;
+        }
+        try {
+            const response = await fetch(`/update_group/${currentRoom}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'add_members',
+                    members: selectedMembers
+                })
+            });
+            const data = await response.json();
+            if (data.error) {
+                showOverlay(data.error);
+            } else {
+                showOverlay(`Added ${selectedMembers.join(', ')} to the group`);
+                groupModal.classList.remove('active');
+                addMembersSection.style.display = 'none';
+                // Refresh group info
+                editGroupBtn.click();
+            }
+        } catch (error) {
+            console.error('Error adding members:', error);
+            showOverlay('Failed to add members');
+        }
+    });
     async function kickMember(memberUsername) {
         if (!confirm(`Are you sure you want to kick ${memberUsername} from the group?`)) {
             return;
         }
-        
         try {
             const response = await fetch(`/update_group/${currentRoom}`, {
                 method: 'POST',
@@ -956,34 +1048,25 @@
                     member: memberUsername
                 })
             });
-            
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(data.error);
             } else {
                 showOverlay(`${memberUsername} has been kicked from the group`);
                 groupModal.classList.remove('active');
-                socket.emit('user_kicked_from_group', {
-                    room: currentRoom,
-                    kicked_user: memberUsername
-                });
             }
         } catch (error) {
             console.error('Error kicking member:', error);
             showOverlay('Failed to kick member');
         }
     }
-
     saveGroupBtn.addEventListener('click', async () => {
         if (!currentGroupInfo || !currentGroupInfo.is_creator) return;
-        
         const newName = editGroupNameInput.value.trim();
         if (!newName) {
             showOverlay('Group name cannot be empty');
             return;
         }
-        
         try {
             const response = await fetch(`/update_group/${currentRoom}`, {
                 method: 'POST',
@@ -995,9 +1078,7 @@
                     name: newName
                 })
             });
-            
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(data.error);
             } else {
@@ -1009,22 +1090,16 @@
                 }
                 groupModal.classList.remove('active');
                 showOverlay('Group renamed successfully');
-                socket.emit('group_renamed', {
-                    room: currentRoom,
-                    new_name: newName
-                });
             }
         } catch (error) {
             console.error('Error renaming group:', error);
             showOverlay('Failed to rename group');
         }
     });
-
     leaveGroupBtn.addEventListener('click', async () => {
         if (!confirm('Are you sure you want to leave this group?')) {
             return;
         }
-        
         try {
             const response = await fetch(`/update_group/${currentRoom}`, {
                 method: 'POST',
@@ -1035,9 +1110,7 @@
                     action: 'leave'
                 })
             });
-            
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(data.error);
             } else {
@@ -1045,7 +1118,6 @@
                 if (groupLi) {
                     groupLi.remove();
                 }
-                
                 groupModal.classList.remove('active');
                 currentRoom = null;
                 chatMessagesDiv.innerHTML = '';
@@ -1059,7 +1131,6 @@
             showOverlay('Failed to leave group');
         }
     });
-
     // Friend/Group click handler
     friendListUl.addEventListener('click', (event) => {
         let targetLi = event.target.closest('li');
@@ -1084,61 +1155,50 @@
             }
         }
     });
-
     function selectRoom(roomId, roomType, roomName, targetLi = null) {
         currentRoomType = roomType;
         const newRoomName = roomId;
-        
         if (currentRoom === newRoomName) return;
-        
         if (currentRoom) {
             socket.emit('leave', { room: currentRoom });
         }
-        
         currentRoom = newRoomName;
         messageOffset = 0;
         hasMoreMessages = true;
-        
+        userScrolledUp = false;
+        isAtBottom = true;
         socket.emit('join', { room: currentRoom });
         loadChatHistory(currentRoom);
-        
         Array.from(friendListUl.children).forEach(li => li.classList.remove('active'));
         if (targetLi) {
             targetLi.classList.add('active');
         }
-        
         if (selectChatPrompt) {
             selectChatPrompt.style.display = 'none';
         }
-        
         if (roomType === 'group') {
             editGroupBtn.style.display = 'inline';
-            callIcons.style.display = 'flex';
+            callIcons.style.display = 'none'; // Disable calls in groups for now
         } else {
             editGroupBtn.style.display = 'none';
             callIcons.style.display = 'flex';
         }
-        
         cancelReply();
     }
-
     function selectFriend(friendUsername, targetLi = null) {
         currentRoomType = 'direct';
         const newRoomName = [username, friendUsername].sort().join('-');
-        
         if (currentRoom === newRoomName) return;
-        
         if (currentRoom) {
             socket.emit('leave', { room: currentRoom });
         }
-        
         currentRoom = newRoomName;
         messageOffset = 0;
         hasMoreMessages = true;
-        
+        userScrolledUp = false;
+        isAtBottom = true;
         socket.emit('join', { room: currentRoom });
         loadChatHistory(currentRoom);
-        
         Array.from(friendListUl.children).forEach(li => li.classList.remove('active'));
         if (targetLi) {
             targetLi.classList.add('active');
@@ -1146,37 +1206,32 @@
             const matchingLi = friendListUl.querySelector(`li[data-friend-username="${friendUsername}"]`);
             if (matchingLi) matchingLi.classList.add('active');
         }
-        
         if (selectChatPrompt) {
             selectChatPrompt.style.display = 'none';
         }
-        
         callIcons.style.display = 'flex';
         editGroupBtn.style.display = 'none';
         cancelReply();
     }
-
     function showOverlay(message) {
         overlayMessage.textContent = message;
         statusOverlay.classList.add('active');
     }
-
     function hideOverlay() {
         statusOverlay.classList.remove('active');
     }
-
     function scrollToBottom() {
-        setTimeout(() => {
-            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-        }, 100);
+        if (!userScrolledUp) {
+            setTimeout(() => {
+                chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+            }, 100);
+        }
     }
-
     function stripHtmlForPreview(html) {
         const div = document.createElement('div');
         div.innerHTML = html;
         return div.textContent || div.innerText || '';
     }
-
     function scrollToMessage(messageId) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (messageElement) {
@@ -1187,7 +1242,6 @@
             }, 1000);
         }
     }
-
     function addMessage(msg, prepend = false) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
@@ -1197,10 +1251,8 @@
         } else {
             messageDiv.classList.add('received');
         }
-
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('message-avatar');
-        
         if (userProfiles[msg.username] && userProfiles[msg.username].profile_picture) {
             const img = document.createElement('img');
             img.src = userProfiles[msg.username].profile_picture;
@@ -1212,65 +1264,53 @@
         } else {
             avatarDiv.textContent = msg.username[0].toUpperCase();
         }
-
         const contentDiv = document.createElement('div');
         contentDiv.classList.add('message-content');
-
         if (currentRoomType === 'group' || msg.username !== username) {
             const senderSpan = document.createElement('div');
             senderSpan.classList.add('message-sender');
             senderSpan.textContent = msg.username;
             contentDiv.appendChild(senderSpan);
         }
-
         if (msg.reply_to) {
             const replyContext = document.createElement('div');
             replyContext.classList.add('message-reply-context');
             replyContext.onclick = () => scrollToMessage(msg.reply_to.id);
-            
             const replyUserDiv = document.createElement('div');
             replyUserDiv.classList.add('message-reply-username');
             replyUserDiv.textContent = msg.reply_to.username;
-            
             const replyTextDiv = document.createElement('div');
             replyTextDiv.classList.add('message-reply-text');
             replyTextDiv.textContent = stripHtmlForPreview(msg.reply_to.msg);
-            
             replyContext.appendChild(replyUserDiv);
             replyContext.appendChild(replyTextDiv);
             contentDiv.appendChild(replyContext);
         }
-
         const textSpan = document.createElement('span');
         textSpan.innerHTML = msg.msg;
-
         const timeSpan = document.createElement('div');
         timeSpan.classList.add('message-time');
         timeSpan.textContent = msg.time;
-
         contentDiv.appendChild(textSpan);
         contentDiv.appendChild(timeSpan);
-
         messageDiv.appendChild(avatarDiv);
         messageDiv.appendChild(contentDiv);
-
         if (msg.username === username && !msg.msg.includes("<em>deleted message</em>")) {
             const actionsDiv = document.createElement('div');
             actionsDiv.classList.add('message-actions');
-
             const replyButton = document.createElement('button');
-            replyButton.textContent = 'Reply';
+            replyButton.innerHTML = '<i class="fas fa-reply"></i>';
             replyButton.classList.add('reply-btn');
+            replyButton.title = 'Reply';
             replyButton.onclick = () => startReply(msg.id, msg.username, msg.msg);
-
             const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
+            editButton.innerHTML = '<i class="fas fa-edit"></i>';
+            editButton.title = 'Edit';
             editButton.onclick = () => startEditMessage(msg.id, msg.msg);
-
             const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
+            deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+            deleteButton.title = 'Delete';
             deleteButton.onclick = () => deleteMessage(msg.id);
-
             actionsDiv.appendChild(replyButton);
             actionsDiv.appendChild(editButton);
             actionsDiv.appendChild(deleteButton);
@@ -1278,16 +1318,14 @@
         } else if (msg.username !== username && !msg.msg.includes("<em>deleted message</em>")) {
             const actionsDiv = document.createElement('div');
             actionsDiv.classList.add('message-actions');
-
             const replyButton = document.createElement('button');
-            replyButton.textContent = 'Reply';
+            replyButton.innerHTML = '<i class="fas fa-reply"></i>';
             replyButton.classList.add('reply-btn');
+            replyButton.title = 'Reply';
             replyButton.onclick = () => startReply(msg.id, msg.username, msg.msg);
-
             actionsDiv.appendChild(replyButton);
             messageDiv.appendChild(actionsDiv);
         }
-
         if (prepend) {
             const firstMsg = chatMessagesDiv.querySelector('.message');
             if (firstMsg) {
@@ -1299,27 +1337,22 @@
             chatMessagesDiv.appendChild(messageDiv);
         }
     }
-
     function startReply(messageId, messageUsername, messageText) {
         replyingTo = {
             id: messageId,
             username: messageUsername,
             msg: messageText
         };
-        
         replyUsername.textContent = messageUsername;
         replyText.textContent = stripHtmlForPreview(messageText);
         replyPreview.style.display = 'flex';
         messageInput.focus();
     }
-
     function cancelReply() {
         replyingTo = null;
         replyPreview.style.display = 'none';
     }
-
     cancelReplyBtn.addEventListener('click', cancelReply);
-
     function updateMessage(messageId, newText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (messageElement) {
@@ -1339,45 +1372,30 @@
             }
         }
     }
-
-    chatMessagesDiv.addEventListener('scroll', async () => {
-        if (chatMessagesDiv.scrollTop === 0 && hasMoreMessages && !isLoadingMore) {
-            await loadMoreMessages();
-        }
-    });
-
     async function loadMoreMessages() {
         if (!currentRoom || isLoadingMore || !hasMoreMessages) return;
-        
         isLoadingMore = true;
         const loadingDiv = document.createElement('div');
         loadingDiv.classList.add('loading-messages');
         loadingDiv.textContent = 'Loading more messages...';
         chatMessagesDiv.insertBefore(loadingDiv, chatMessagesDiv.firstChild);
-        
         const scrollHeightBefore = chatMessagesDiv.scrollHeight;
-        
         try {
             const response = await fetch(`/history/${currentRoom}?offset=${messageOffset}&limit=50`);
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(data.error);
                 loadingDiv.remove();
                 isLoadingMore = false;
                 return;
             }
-            
             loadingDiv.remove();
-            
             if (data.messages && data.messages.length > 0) {
                 const usersInMessages = [...new Set(data.messages.map(msg => msg.username))];
                 await loadUserProfiles(usersInMessages);
-                
                 data.messages.forEach(msg => addMessage(msg, true));
                 messageOffset += data.messages.length;
                 hasMoreMessages = data.has_more;
-                
                 const scrollHeightAfter = chatMessagesDiv.scrollHeight;
                 chatMessagesDiv.scrollTop = scrollHeightAfter - scrollHeightBefore;
             } else {
@@ -1390,14 +1408,12 @@
             isLoadingMore = false;
         }
     }
-
     async function loadChatHistory(roomName) {
         if (isLoadingHistory || currentRoom !== roomName) return;
         isLoadingHistory = true;
         chatMessagesDiv.innerHTML = '';
         messageOffset = 0;
         hasMoreMessages = true;
-        
         if (roomName.startsWith('group_')) {
             const groupLi = friendListUl.querySelector(`li[data-room-id="${roomName}"]`);
             if (groupLi) {
@@ -1406,11 +1422,9 @@
         } else {
             currentChatHeader.textContent = `${roomName.replace(username + '-', '').replace('-' + username, '')}`;
         }
-        
         try {
             const response = await fetch(`/history/${roomName}?offset=0&limit=50`);
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(data.error);
                 currentRoom = null;
@@ -1419,10 +1433,8 @@
                 editGroupBtn.style.display = 'none';
                 return;
             }
-            
             const usersInChat = [...new Set(data.messages.map(msg => msg.username))];
             await loadUserProfiles(usersInChat);
-            
             data.messages.forEach(msg => addMessage(msg));
             messageOffset = data.messages.length;
             hasMoreMessages = data.has_more;
@@ -1438,7 +1450,6 @@
             isLoadingHistory = false;
         }
     }
-
     async function loadUserProfiles(usernames) {
         try {
             const response = await fetch('/get_user_profiles', {
@@ -1448,10 +1459,8 @@
                 },
                 body: JSON.stringify({ usernames })
             });
-            
             const profiles = await response.json();
             userProfiles = { ...userProfiles, ...profiles };
-            
             usernames.forEach(uname => {
                 const avatarContainer = document.getElementById(`avatar-${uname}`);
                 if (avatarContainer && profiles[uname] && profiles[uname].profile_picture) {
@@ -1462,37 +1471,37 @@
             console.error('Error loading user profiles:', error);
         }
     }
-
     sendButton.addEventListener('click', () => {
         const messageText = messageInput.value.trim();
         if (messageText && currentRoom) {
+            if (messageText.length > MAX_MESSAGE_LENGTH) {
+                showOverlay(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
+                return;
+            }
             const messageData = {
                 username: username,
                 room: currentRoom,
                 msg: messageText
             };
-            
             if (replyingTo) {
                 messageData.reply_to = replyingTo;
             }
-            
             socket.emit('send_message', messageData);
             messageInput.value = '';
+            charCounter.classList.remove('visible', 'warning', 'error');
+            charCounter.textContent = `0 / ${MAX_MESSAGE_LENGTH}`;
             messageInput.focus();
             cancelReply();
-            setTimeout(scrollToBottom, 50);
             socket.emit('typing_stop', { room: currentRoom });
         } else if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
         }
     });
-
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendButton.click();
         }
     });
-
     messageInput.addEventListener('input', () => {
         if (currentRoom) {
             socket.emit('typing_start', { room: currentRoom });
@@ -1502,7 +1511,6 @@
             }, 1000);
         }
     });
-
     messageInput.addEventListener('paste', async (e) => {
         const items = e.clipboardData.items;
         for (let i = 0; i < items.length; i++) {
@@ -1514,10 +1522,8 @@
             }
         }
     });
-
     document.addEventListener('paste', async (e) => {
         if (document.activeElement !== messageInput) return;
-        
         const items = e.clipboardData.items;
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1 || items[i].type.indexOf('video') !== -1) {
@@ -1528,19 +1534,15 @@
             }
         }
     });
-
     function showMediaPreview(file) {
         if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
             return;
         }
-        
         pendingMediaFile = file;
         mediaPreviewContainer.innerHTML = '';
-        
         const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : file.type.split('/')[1];
         const isVideo = file.type.startsWith('video/') || ['mp4', 'webm', 'ogg'].includes(fileExtension);
-        
         if (isVideo) {
             const video = document.createElement('video');
             video.controls = true;
@@ -1551,32 +1553,25 @@
             img.src = URL.createObjectURL(file);
             mediaPreviewContainer.appendChild(img);
         }
-        
         mediaPreviewModal.classList.add('active');
     }
-
     sendMediaBtn.addEventListener('click', async () => {
         if (!pendingMediaFile) return;
-        
         mediaPreviewModal.classList.remove('active');
-        
         const formData = new FormData();
         formData.append('file', pendingMediaFile);
-        
         try {
             const response = await fetch('/upload_file', {
                 method: 'POST',
                 body: formData
             });
             const data = await response.json();
-            
             if (data.error) {
                 showOverlay(`File upload failed: ${data.error}`);
             } else if (data.url) {
                 const fileName = pendingMediaFile.name || 'file';
                 const fileExtension = fileName.split('.').pop().toLowerCase();
                 let messageContent;
-                
                 if (['png', 'jpg', 'jpeg', 'gif'].includes(fileExtension)) {
                     messageContent = `<a href="${data.url}" target="_blank"><img src="${data.url}" class="message-file image" alt="Uploaded Image"></a>`;
                 } else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
@@ -1584,17 +1579,14 @@
                 } else {
                     messageContent = `<a href="${data.url}" target="_blank">Uploaded file: ${fileName}</a>`;
                 }
-                
                 const messageData = {
                     username: username,
                     room: currentRoom,
                     msg: messageContent
                 };
-                
                 if (replyingTo) {
                     messageData.reply_to = replyingTo;
                 }
-                
                 socket.emit('send_message', messageData);
                 messageInput.focus();
                 cancelReply();
@@ -1606,13 +1598,11 @@
             pendingMediaFile = null;
         }
     });
-
     cancelMediaBtn.addEventListener('click', () => {
         mediaPreviewModal.classList.remove('active');
         pendingMediaFile = null;
         mediaPreviewContainer.innerHTML = '';
     });
-
     fileInput.addEventListener('change', async (event) => {
         if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
@@ -1621,11 +1611,9 @@
         }
         const file = event.target.files[0];
         if (!file) return;
-        
         showMediaPreview(file);
         fileInput.value = '';
     });
-
     function startEditMessage(messageId, currentMessageText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (!messageElement) return;
@@ -1639,6 +1627,7 @@
         const input = document.createElement('input');
         input.type = 'text';
         input.value = cleanText;
+        input.maxLength = MAX_MESSAGE_LENGTH;
         input.classList.add('message-edit-input');
         input.onkeypress = (e) => {
             if (e.key === 'Enter') {
@@ -1655,7 +1644,6 @@
         input.focus();
         input.select();
     }
-
     function confirmEditMessage(messageId, newText, inputElement, onBlur = false) {
         const originalText = inputElement.defaultValue;
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
@@ -1674,6 +1662,14 @@
             if (actionsDiv) actionsDiv.style.display = '';
             return;
         }
+        if (newText.length > MAX_MESSAGE_LENGTH) {
+            showOverlay(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
+            textSpan.innerHTML = originalText;
+            inputElement.replaceWith(textSpan);
+            const actionsDiv = messageElement.querySelector('.message-actions');
+            if (actionsDiv) actionsDiv.style.display = '';
+            return;
+        }
         socket.emit('edit_message', {
             message_id: messageId,
             new_text: newText,
@@ -1684,7 +1680,6 @@
         const actionsDiv = messageElement.querySelector('.message-actions');
         if (actionsDiv) actionsDiv.style.display = '';
     }
-
     function deleteMessage(messageId) {
         if (confirm("Are you sure you want to delete this message?")) {
             socket.emit('delete_message', {
@@ -1693,7 +1688,6 @@
             });
         }
     }
-
     // WebRTC Functions
     async function loadAvailableDevices() {
         try {
@@ -1724,7 +1718,6 @@
             console.error('Error loading devices:', error);
         }
     }
-
     async function switchMediaDevice(deviceType, deviceId) {
         if (!localStream) return;
         try {
@@ -1770,7 +1763,6 @@
             showOverlay('Failed to switch device. Please try again.');
         }
     }
-
     function addSystemMessage(message, icon = 'phone') {
         const systemDiv = document.createElement('div');
         systemDiv.classList.add('system-message');
@@ -1778,7 +1770,6 @@
         chatMessagesDiv.appendChild(systemDiv);
         scrollToBottom();
     }
-
     function logCallToChat(callType, action, otherUser) {
         let message = '';
         const icon = callType === 'video' ? 'video' : 'phone';
@@ -1791,20 +1782,16 @@
         }
         addSystemMessage(message, icon);
     }
-
     async function startCall(callType) {
         if (!currentRoom) {
-            showOverlay("Please select a friend or group to call.");
+            showOverlay("Please select a friend to call.");
             return;
         }
-        
-        let receiver;
         if (currentRoomType === 'group') {
-            receiver = currentRoom;
-        } else {
-            receiver = currentRoom.replace(username + '-', '').replace('-' + username, '');
+            showOverlay("Group calls are not yet supported.");
+            return;
         }
-        
+        let receiver = currentRoom.replace(username + '-', '').replace('-' + username, '');
         try {
             currentCallType = callType;
             const constraints = {
@@ -1839,7 +1826,6 @@
             closeCall();
         }
     }
-
     async function answerCall() {
         if (!incomingCallData) return;
         try {
@@ -1879,7 +1865,6 @@
             rejectCall();
         }
     }
-
     function rejectCall() {
         if (!incomingCallData) return;
         socket.emit('reject_call', {
@@ -1890,7 +1875,6 @@
         logCallToChat(incomingCallData.type, 'missed', incomingCallData.caller);
         incomingCallData = null;
     }
-
     function closeCall() {
         const wasActive = isCallActive;
         const callType = currentCallType;
@@ -1906,6 +1890,13 @@
             localStream.getTracks().forEach(track => track.stop());
             localStream = null;
         }
+        if (screenStream) {
+            screenStream.getTracks().forEach(track => track.stop());
+            screenStream = null;
+        }
+        isSharingScreen = false;
+        shareScreenBtn.classList.remove('active');
+        shareScreenBtn.innerHTML = '<i class="fas fa-desktop"></i>';
         localVideo.srcObject = null;
         remoteVideo.srcObject = null;
         callModal.classList.remove('active');
@@ -1921,7 +1912,6 @@
         currentCallType = null;
         incomingCallData = null;
     }
-
     async function createPeerConnection() {
         peerConnection = new RTCPeerConnection(configuration);
         localStream.getTracks().forEach(track => {
@@ -1951,7 +1941,6 @@
             }
         };
     }
-
     function toggleMuteAudio() {
         if (localStream) {
             const audioTrack = localStream.getAudioTracks()[0];
@@ -1963,7 +1952,6 @@
             }
         }
     }
-
     function toggleMuteVideo() {
         if (localStream) {
             const videoTrack = localStream.getVideoTracks()[0];
@@ -1975,7 +1963,63 @@
             }
         }
     }
-
+    async function toggleShareScreen() {
+        if (!isCallActive) {
+            showOverlay('You must be in a call to share your screen');
+            return;
+        }
+        try {
+            if (!isSharingScreen) {
+                // Start screen sharing
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: "always" },
+                    audio: false
+                });
+                const screenTrack = screenStream.getVideoTracks()[0];
+                // Replace video track in peer connection
+                if (peerConnection) {
+                    const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) {
+                        await sender.replaceTrack(screenTrack);
+                    }
+                }
+                // Update local video to show screen share
+                localVideo.srcObject = screenStream;
+                isSharingScreen = true;
+                shareScreenBtn.classList.add('active');
+                shareScreenBtn.innerHTML = '<i class="fas fa-desktop"></i> Stop';
+                // Handle when user stops sharing from browser UI
+                screenTrack.onended = () => {
+                    stopShareScreen();
+                };
+            } else {
+                stopShareScreen();
+            }
+        } catch (error) {
+            console.error('Error sharing screen:', error);
+            showOverlay('Failed to share screen. Please check permissions.');
+        }
+    }
+    async function stopShareScreen() {
+        if (screenStream) {
+            screenStream.getTracks().forEach(track => track.stop());
+            screenStream = null;
+        }
+        // Switch back to camera
+        if (localStream && currentCallType === 'video') {
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (videoTrack && peerConnection) {
+                const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) {
+                    await sender.replaceTrack(videoTrack);
+                }
+            }
+            localVideo.srcObject = localStream;
+        }
+        isSharingScreen = false;
+        shareScreenBtn.classList.remove('active');
+        shareScreenBtn.innerHTML = '<i class="fas fa-desktop"></i>';
+    }
     function toggleMinimizeCall() {
         isCallMinimized = !isCallMinimized;
         callModal.classList.toggle('minimized');
@@ -1988,16 +2032,13 @@
             minimizeCallBtn.title = 'Minimize';
         }
     }
-
     function openDeviceSettings() {
         loadAvailableDevices();
         deviceSettingsModal.classList.add('active');
     }
-
     function closeDeviceSettings() {
         deviceSettingsModal.classList.remove('active');
     }
-
     async function saveDeviceSettings() {
         const selectedMic = microphoneSelect.value;
         const selectedCam = cameraSelect.value;
@@ -2005,7 +2046,7 @@
             if (selectedMic && selectedMic !== selectedDevices.audioInput) {
                 await switchMediaDevice('audio', selectedMic);
             }
-            if (selectedCam && selectedCam !== selectedDevices.videoInput && currentCallType === 'video') {
+            if (selectedCam && selectedCam !== selectedDevices.videoInput && currentCallType === 'video' && !isSharingScreen) {
                 await switchMediaDevice('video', selectedCam);
             }
         } else {
@@ -2014,12 +2055,12 @@
         }
         closeDeviceSettings();
     }
-
     audioCallBtn.addEventListener('click', () => startCall('audio'));
     videoCallBtn.addEventListener('click', () => startCall('video'));
     endCallBtn.addEventListener('click', closeCall);
     muteAudioBtn.addEventListener('click', toggleMuteAudio);
     muteVideoBtn.addEventListener('click', toggleMuteVideo);
+    shareScreenBtn.addEventListener('click', toggleShareScreen);
     answerCallBtn.addEventListener('click', answerCall);
     rejectCallBtn.addEventListener('click', rejectCall);
     minimizeCallBtn.addEventListener('click', toggleMinimizeCall);
@@ -2031,20 +2072,17 @@
             toggleMinimizeCall();
         }
     });
-
     // Socket.IO Events
     socket.on('connect', () => {
         console.log('Connected to Socket.IO');
         socket.emit('user_connected');
         userStatus = 'online';
         socket.emit('request_statuses');
-        
         const friendUsernames = Array.from(friendListUl.querySelectorAll('li[data-friend-username]'))
             .map(li => li.dataset.friendUsername);
         if (friendUsernames.length > 0) {
             loadUserProfiles(friendUsernames);
         }
-        
         const storedRoomType = localStorage.getItem('activeRoomType');
         if (storedRoomType === 'group') {
             const storedRoom = localStorage.getItem('activeRoom');
@@ -2061,27 +2099,25 @@
             }
         }
     });
-
     socket.on('message', (data) => {
         if (data.room === currentRoom) {
             if (!userProfiles[data.username]) {
                 loadUserProfiles([data.username]);
             }
             addMessage(data);
-            scrollToBottom();
+            if (isAtBottom) {
+                scrollToBottom();
+            }
         }
     });
-
     socket.on('message_updated', (data) => {
         if (data.room === currentRoom) {
             const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
                                         ? data.new_text
                                         : `${data.new_text} <em>(edited)</em>`;
             updateMessage(data.id, newTextWithEditedTag);
-            scrollToBottom();
         }
     });
-
     socket.on('error', (data) => {
         console.error('Socket Error:', data.message);
         showOverlay(data.message);
@@ -2098,13 +2134,11 @@
             }
         }
     });
-
     socket.on('disconnect', () => {
         console.log('Disconnected from Socket.IO');
         socket.emit('user_disconnected');
         showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
     });
-
     socket.on('user_status_update', (data) => {
         const statusIndicator = document.querySelector(`.status-indicator[data-username="${data.username}"]`);
         if (statusIndicator) {
@@ -2113,7 +2147,6 @@
         }
         connectedUsers[data.username] = data.status;
     });
-
     socket.on('user_typing', (data) => {
         const typingIndicator = document.getElementById('typing-indicator');
         if (data.is_typing) {
@@ -2127,7 +2160,9 @@
                     <span>...</span>
                 `;
                 chatMessagesDiv.appendChild(indicator);
-                scrollToBottom();
+                if (isAtBottom) {
+                    scrollToBottom();
+                }
             }
         } else {
             const existingIndicator = document.getElementById('typing-indicator');
@@ -2136,7 +2171,6 @@
             }
         }
     });
-
     socket.on('all_statuses', (data) => {
         Object.keys(data).forEach(username => {
             const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
@@ -2146,14 +2180,12 @@
             }
         });
     });
-
     socket.on('incoming_call', (data) => {
         incomingCallData = data;
         document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
         document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
         incomingCallModal.classList.add('active');
     });
-
     socket.on('call_answered', async (data) => {
         callStatus.textContent = 'Connecting...';
         await createPeerConnection();
@@ -2166,17 +2198,14 @@
         const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
         logCallToChat(currentCallType, 'started', otherUser);
     });
-
     socket.on('call_rejected', (data) => {
         showOverlay(`${data.rejecter} rejected your call.`);
         closeCall();
     });
-
     socket.on('call_ended', (data) => {
         showOverlay('Call ended.');
         closeCall();
     });
-
     socket.on('webrtc_offer', async (data) => {
         if (!peerConnection) {
             await createPeerConnection();
@@ -2189,17 +2218,14 @@
             answer: answer
         });
     });
-
     socket.on('webrtc_answer', async (data) => {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
     });
-
     socket.on('webrtc_ice_candidate', async (data) => {
         if (peerConnection && data.candidate) {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     });
-
     // Mobile keyboard handling
     const chatArea = document.querySelector('.chat-area');
     let isAboutToSend = false;
@@ -2224,7 +2250,6 @@
     sendButton.addEventListener('touchstart', () => isAboutToSend = true);
     messageInput.addEventListener('focus', handleMobileFocus);
     messageInput.addEventListener('blur', handleMobileBlur);
-
     navigator.mediaDevices.getUserMedia({ audio: true, video: true })
         .then(stream => {
             stream.getTracks().forEach(track => track.stop());
