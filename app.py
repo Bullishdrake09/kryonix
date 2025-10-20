@@ -41,6 +41,7 @@ user_message_times = defaultdict(lambda: deque(maxlen=20))
 RATE_LIMIT_MESSAGES = 10
 RATE_LIMIT_WINDOW = 5
 MESSAGES_PER_PAGE = 50
+MAX_MESSAGE_LENGTH = 3000
 
 # File lock for thread-safe operations
 file_lock = threading.Lock()
@@ -571,7 +572,8 @@ def chat():
                            username=current_user.username, 
                            friends_list=friends_list,
                            group_chats=user_groups,
-                           current_user=current_user)
+                           current_user=current_user,
+                           max_message_length=MAX_MESSAGE_LENGTH)
 
 @app.route('/history/<room_name>')
 @login_required
@@ -819,6 +821,28 @@ def update_group(group_id):
                 return jsonify({'error': 'Failed to kick member'}), 500
             return jsonify({'error': 'Member not in group'}), 400
         
+        elif action == 'add_members':
+            if current_user.username != group.get('creator'):
+                return jsonify({'error': 'Only the group creator can add members'}), 403
+            
+            new_members = data.get('members', [])
+            if not new_members:
+                return jsonify({'error': 'No members specified'}), 400
+            
+            # Verify all new members are friends of creator
+            user_data = load_user_data(current_user.username)
+            for member in new_members:
+                if member not in user_data.get('friends', []):
+                    return jsonify({'error': f'{member} is not your friend'}), 400
+                if member in group['members']:
+                    return jsonify({'error': f'{member} is already in the group'}), 400
+            
+            # Add members
+            group['members'].extend(new_members)
+            if save_group_chats(group_chats):
+                return jsonify({'success': True, 'added_members': new_members})
+            return jsonify({'error': 'Failed to add members'}), 500
+        
         elif action == 'leave':
             if current_user.username == group.get('creator'):
                 return jsonify({'error': 'Group creator cannot leave. Delete the group instead.'}), 403
@@ -1050,7 +1074,7 @@ def settings():
                     old_username = current_user.username
                     user_data['username'] = new_username
                     
-                    # Update in all users' friend lists
+                    # Update in all users' friend lists, requests, and blocked lists
                     for uname, udata in all_users.items():
                         if old_username in udata.get('friends', []):
                             udata['friends'].remove(old_username)
@@ -1061,6 +1085,33 @@ def settings():
                         if old_username in udata.get('blocked', []):
                             udata['blocked'].remove(old_username)
                             udata['blocked'].append(new_username)
+                        
+                        # Update chat history keys
+                        if 'chat_history' in udata:
+                            new_chat_history = {}
+                            for room_key, messages in udata['chat_history'].items():
+                                if old_username in room_key:
+                                    # Replace old username in room key
+                                    new_room_key = room_key.replace(old_username, new_username)
+                                    new_chat_history[new_room_key] = messages
+                                else:
+                                    new_chat_history[room_key] = messages
+                            udata['chat_history'] = new_chat_history
+                    
+                    # Update in group chats
+                    group_chats = load_group_chats()
+                    for group_id, group_data in group_chats.items():
+                        if old_username in group_data.get('members', []):
+                            idx = group_data['members'].index(old_username)
+                            group_data['members'][idx] = new_username
+                        if group_data.get('creator') == old_username:
+                            group_data['creator'] = new_username
+                        # Update message usernames in group
+                        for msg in group_data.get('messages', []):
+                            if msg.get('username') == old_username:
+                                msg['username'] = new_username
+                    
+                    save_group_chats(group_chats)
                     
                     # Move user data to new key
                     all_users[new_username] = user_data
@@ -1123,7 +1174,6 @@ def settings():
                            user_data=user_data,
                            message=message,
                            message_type=message_type)
-
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin_page():
@@ -1398,6 +1448,11 @@ def handle_message(data):
             emit('error', {'message': f'You are temporarily timed out until {current_user.timeout_until.strftime("%Y-%m-%d %H:%M")}. Cannot send messages.'}, room=request.sid)
             return
         
+        # Check message length
+        if len(msg) > MAX_MESSAGE_LENGTH:
+            emit('error', {'message': f'Message too long. Maximum {MAX_MESSAGE_LENGTH} characters allowed.'}, room=request.sid)
+            return
+        
         if not check_rate_limit(username):
             emit('error', {'message': f'You are sending messages too quickly. Please wait a moment.'}, room=request.sid)
             app.logger.warning(f"Rate limit exceeded for user {username}")
@@ -1438,6 +1493,11 @@ def handle_edit_message(data):
 
         if current_user.is_timed_out:
             emit('error', {'message': f'You are temporarily timed out until {current_user.timeout_until.strftime("%Y-%m-%d %H:%M")}. Cannot edit messages.'}, room=request.sid)
+            return
+
+        # Check message length
+        if len(new_text) > MAX_MESSAGE_LENGTH:
+            emit('error', {'message': f'Message too long. Maximum {MAX_MESSAGE_LENGTH} characters allowed.'}, room=request.sid)
             return
 
         # Get message history
