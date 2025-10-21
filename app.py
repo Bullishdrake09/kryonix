@@ -880,6 +880,86 @@ def get_user_profiles():
         app.logger.error(f"Error getting user profiles: {e}")
         return jsonify({'error': 'Failed to get profiles'}), 500
 
+@app.route('/get_contacts_order', methods=['GET'])
+@login_required
+def get_contacts_order():
+    try:
+        username = current_user.username
+        user_data = load_user_data(username)
+        
+        if not user_data:
+            return jsonify({'error': 'User data not found'}), 404
+        
+        contacts = []
+        
+        # Process direct message contacts
+        friends = user_data.get('friends', [])
+        chat_history = user_data.get('chat_history', {})
+        
+        for friend in friends:
+            room_name = '-'.join(sorted([username, friend]))
+            messages = chat_history.get(room_name, [])
+            
+            # Get last message timestamp
+            last_message_time = None
+            last_message_timestamp = 0
+            if messages:
+                last_msg = messages[-1]
+                # Use the message ID which contains timestamp
+                msg_id = last_msg.get('id', '')
+                if '_' in msg_id:
+                    try:
+                        timestamp_str = msg_id.split('_')[1]
+                        last_message_timestamp = int(timestamp_str)
+                        last_message_time = datetime.fromtimestamp(last_message_timestamp / 1000).isoformat()
+                    except:
+                        last_message_timestamp = 0
+            
+            contacts.append({
+                'id': friend,
+                'type': 'direct',
+                'last_message_time': last_message_time,
+                'last_message_timestamp': last_message_timestamp,
+                'unread_count': 0
+            })
+        
+        # Process group chats
+        group_chats = load_group_chats()
+        for group_id, group_data in group_chats.items():
+            if username in group_data.get('members', []):
+                messages = group_data.get('messages', [])
+                
+                # Get last message timestamp
+                last_message_time = None
+                last_message_timestamp = 0
+                if messages:
+                    last_msg = messages[-1]
+                    msg_id = last_msg.get('id', '')
+                    if '_' in msg_id:
+                        try:
+                            timestamp_str = msg_id.split('_')[1]
+                            last_message_timestamp = int(timestamp_str)
+                            last_message_time = datetime.fromtimestamp(last_message_timestamp / 1000).isoformat()
+                        except:
+                            last_message_timestamp = 0
+                
+                contacts.append({
+                    'id': group_id,
+                    'type': 'group',
+                    'name': group_data.get('name', 'Unnamed Group'),
+                    'last_message_time': last_message_time,
+                    'last_message_timestamp': last_message_timestamp,
+                    'unread_count': 0
+                })
+        
+        # Sort contacts by last message timestamp (most recent first)
+        contacts.sort(key=lambda x: x.get('last_message_timestamp', 0), reverse=True)
+        
+        return jsonify({'contacts': contacts})
+    except Exception as e:
+        app.logger.error(f"Error getting contacts order: {e}")
+        return jsonify({'error': 'Failed to get contacts order'}), 500
+
 @app.route('/friends', methods=['GET', 'POST'])
 @login_required
 def friends():
