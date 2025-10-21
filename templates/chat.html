@@ -2240,6 +2240,11 @@
     });
 
     socket.on('message', (data) => {
+        // Skip if this message ID already exists in the DOM (e.g., from edit or duplicate)
+        if (chatMessagesDiv.querySelector(`[data-message-id="${data.id}"]`)) {
+            return; // Already rendered — skip
+        }
+
         if (data.room === currentRoom) {
             if (!userProfiles[data.username]) {
                 loadUserProfiles([data.username]);
