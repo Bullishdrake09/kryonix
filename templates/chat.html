@@ -102,6 +102,16 @@
     margin-left: 8px;
     font-weight: 600;
 }
+/* Unread indicator */
+.unread-indicator {
+    background: var(--primary);
+    color: var(--darker);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: auto;
+    font-weight: 600;
+}
 /* Media Preview Modal */
 .media-preview-modal {
     display: none;
@@ -341,9 +351,13 @@
     align-items: flex-start;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(138, 43, 226, 0.3);
+    max-width: 100%;
+    overflow: hidden;
 }
 .reply-preview-content {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 .reply-preview-username {
     color: #8a2be2;
@@ -357,7 +371,7 @@
     font-size: 0.9em;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    word-wrap: break-word;
     max-width: 90%;
 }
 .reply-preview-close {
@@ -384,6 +398,9 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border: 1px solid rgba(138, 43, 226, 0.2);
+    max-width: 100%;
+    overflow: hidden;
+    word-wrap: break-word;
 }
 .message-reply-context:hover {
     background: rgba(138, 43, 226, 0.2);
@@ -400,7 +417,8 @@
     color: #adb5bd;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    word-wrap: break-word;
+    max-width: 100%;
 }
 .message.highlighted {
     animation: highlight-pulse 1s ease-in-out;
@@ -712,6 +730,8 @@
     let incomingCallData = null;
     let screenStream = null;
     let isSharingScreen = false;
+    let isConnected = socket.connected;
+    let reconnectInterval = null;
     const configuration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -792,6 +812,29 @@
         audioInput: null,
         videoInput: null
     };
+
+    socket.on('connect', () => {
+        isConnected = true;
+        if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+        }
+    });
+    socket.on('disconnect', () => {
+        isConnected = false;
+        if (!reconnectInterval) {
+            reconnectInterval = setInterval(() => {
+                if (!socket.connected) {
+                    console.log('Attempting manual reconnection...');
+                    socket.connect();
+                } else {
+                    clearInterval(reconnectInterval);
+                    reconnectInterval = null;
+                }
+            }, 3000);
+        }
+    });
+
     // Character counter
     messageInput.addEventListener('input', () => {
         const length = messageInput.value.length;
@@ -812,17 +855,18 @@
             charCounter.classList.remove('error');
         }
     });
+
     // Detect scroll position
     chatMessagesDiv.addEventListener('scroll', () => {
         const threshold = 100;
         const position = chatMessagesDiv.scrollHeight - chatMessagesDiv.scrollTop - chatMessagesDiv.clientHeight;
         isAtBottom = position < threshold;
         userScrolledUp = !isAtBottom;
-        // Load more messages when scrolled to top
         if (chatMessagesDiv.scrollTop === 0 && hasMoreMessages && !isLoadingMore) {
             loadMoreMessages();
         }
     });
+
     // Sidebar toggle functionality
     menuToggle.addEventListener('click', () => {
         sidebar.classList.add('active');
@@ -830,6 +874,7 @@
     closeSidebarButton.addEventListener('click', () => {
         sidebar.classList.remove('active');
     });
+
     // Contact search functionality
     contactSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
@@ -843,6 +888,7 @@
             }
         });
     });
+
     // Create group functionality
     createGroupBtn.addEventListener('click', () => {
         groupModalTitle.textContent = 'Create New Group';
@@ -905,6 +951,7 @@
             showOverlay('Failed to create group');
         }
     });
+
     // Edit group functionality
     editGroupBtn.addEventListener('click', async () => {
         if (!currentRoom || !currentRoom.startsWith('group_')) return;
@@ -922,9 +969,7 @@
             editGroupNameInput.value = data.name;
             editGroupNameInput.disabled = !data.is_creator;
             addMembersSection.style.display = 'none';
-            // Show/hide add members button
             showAddMembersBtn.style.display = data.is_creator ? 'block' : 'none';
-            // Show members
             groupMembersList.innerHTML = '';
             data.members.forEach(member => {
                 const memberDiv = document.createElement('div');
@@ -951,7 +996,6 @@
                 memberInfo.appendChild(avatar);
                 memberInfo.appendChild(nameSpan);
                 memberDiv.appendChild(memberInfo);
-                // Add kick button for creator
                 if (data.is_creator && member.username !== data.creator) {
                     const kickBtn = document.createElement('button');
                     kickBtn.classList.add('kick-btn');
@@ -961,7 +1005,6 @@
                 }
                 groupMembersList.appendChild(memberDiv);
             });
-            // Show/hide leave button
             leaveGroupBtn.style.display = data.is_creator ? 'none' : 'block';
             groupModal.classList.add('active');
         } catch (error) {
@@ -969,13 +1012,11 @@
             showOverlay('Failed to load group info');
         }
     });
-    // Show add members section
+
     showAddMembersBtn.addEventListener('click', () => {
         if (addMembersSection.style.display === 'none') {
-            // Load available friends
             addMemberSelection.innerHTML = '';
             const currentMembers = currentGroupInfo.members.map(m => m.username);
-            // Get all friends from sidebar
             const allFriends = Array.from(friendListUl.querySelectorAll('li[data-friend-username]'))
                 .map(li => li.dataset.friendUsername);
             const availableFriends = allFriends.filter(f => !currentMembers.includes(f));
@@ -999,7 +1040,7 @@
             addMembersSection.style.display = 'none';
         }
     });
-    // Confirm add members
+
     confirmAddMembers.addEventListener('click', async () => {
         const selectedMembers = Array.from(addMemberSelection.querySelectorAll('input[type="checkbox"]:checked'))
             .map(cb => cb.value);
@@ -1025,7 +1066,6 @@
                 showOverlay(`Added ${selectedMembers.join(', ')} to the group`);
                 groupModal.classList.remove('active');
                 addMembersSection.style.display = 'none';
-                // Refresh group info
                 editGroupBtn.click();
             }
         } catch (error) {
@@ -1033,6 +1073,7 @@
             showOverlay('Failed to add members');
         }
     });
+
     async function kickMember(memberUsername) {
         if (!confirm(`Are you sure you want to kick ${memberUsername} from the group?`)) {
             return;
@@ -1060,6 +1101,7 @@
             showOverlay('Failed to kick member');
         }
     }
+
     saveGroupBtn.addEventListener('click', async () => {
         if (!currentGroupInfo || !currentGroupInfo.is_creator) return;
         const newName = editGroupNameInput.value.trim();
@@ -1096,6 +1138,7 @@
             showOverlay('Failed to rename group');
         }
     });
+
     leaveGroupBtn.addEventListener('click', async () => {
         if (!confirm('Are you sure you want to leave this group?')) {
             return;
@@ -1131,6 +1174,7 @@
             showOverlay('Failed to leave group');
         }
     });
+
     // Friend/Group click handler
     friendListUl.addEventListener('click', (event) => {
         let targetLi = event.target.closest('li');
@@ -1155,10 +1199,10 @@
             }
         }
     });
+
     function selectRoom(roomId, roomType, roomName, targetLi = null) {
         currentRoomType = roomType;
         const newRoomName = roomId;
-        if (currentRoom === newRoomName) return;
         if (currentRoom) {
             socket.emit('leave', { room: currentRoom });
         }
@@ -1168,7 +1212,7 @@
         userScrolledUp = false;
         isAtBottom = true;
         socket.emit('join', { room: currentRoom });
-        loadChatHistory(currentRoom);
+        chatMessagesDiv.innerHTML = '<div class="loading-messages">Loading messages...</div>';
         Array.from(friendListUl.children).forEach(li => li.classList.remove('active'));
         if (targetLi) {
             targetLi.classList.add('active');
@@ -1178,17 +1222,18 @@
         }
         if (roomType === 'group') {
             editGroupBtn.style.display = 'inline';
-            callIcons.style.display = 'none'; // Disable calls in groups for now
+            callIcons.style.display = 'none';
         } else {
             editGroupBtn.style.display = 'none';
             callIcons.style.display = 'flex';
         }
         cancelReply();
+        loadChatHistory(newRoomName);
     }
+
     function selectFriend(friendUsername, targetLi = null) {
         currentRoomType = 'direct';
         const newRoomName = [username, friendUsername].sort().join('-');
-        if (currentRoom === newRoomName) return;
         if (currentRoom) {
             socket.emit('leave', { room: currentRoom });
         }
@@ -1198,7 +1243,7 @@
         userScrolledUp = false;
         isAtBottom = true;
         socket.emit('join', { room: currentRoom });
-        loadChatHistory(currentRoom);
+        chatMessagesDiv.innerHTML = '<div class="loading-messages">Loading messages...</div>';
         Array.from(friendListUl.children).forEach(li => li.classList.remove('active'));
         if (targetLi) {
             targetLi.classList.add('active');
@@ -1212,14 +1257,18 @@
         callIcons.style.display = 'flex';
         editGroupBtn.style.display = 'none';
         cancelReply();
+        loadChatHistory(newRoomName);
     }
+
     function showOverlay(message) {
         overlayMessage.textContent = message;
         statusOverlay.classList.add('active');
     }
+
     function hideOverlay() {
         statusOverlay.classList.remove('active');
     }
+
     function scrollToBottom() {
         if (!userScrolledUp) {
             setTimeout(() => {
@@ -1227,11 +1276,13 @@
             }, 100);
         }
     }
+
     function stripHtmlForPreview(html) {
         const div = document.createElement('div');
         div.innerHTML = html;
         return div.textContent || div.innerText || '';
     }
+
     function scrollToMessage(messageId) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (messageElement) {
@@ -1242,6 +1293,7 @@
             }, 1000);
         }
     }
+
     function addMessage(msg, prepend = false) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
@@ -1337,6 +1389,7 @@
             chatMessagesDiv.appendChild(messageDiv);
         }
     }
+
     function startReply(messageId, messageUsername, messageText) {
         replyingTo = {
             id: messageId,
@@ -1348,11 +1401,14 @@
         replyPreview.style.display = 'flex';
         messageInput.focus();
     }
+
     function cancelReply() {
         replyingTo = null;
         replyPreview.style.display = 'none';
     }
+
     cancelReplyBtn.addEventListener('click', cancelReply);
+
     function updateMessage(messageId, newText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (messageElement) {
@@ -1372,6 +1428,7 @@
             }
         }
     }
+
     async function loadMoreMessages() {
         if (!currentRoom || isLoadingMore || !hasMoreMessages) return;
         isLoadingMore = true;
@@ -1408,10 +1465,12 @@
             isLoadingMore = false;
         }
     }
+
     async function loadChatHistory(roomName) {
-        if (isLoadingHistory || currentRoom !== roomName) return;
+        if (isLoadingHistory) return;
+        const loadingRoomName = roomName;
         isLoadingHistory = true;
-        chatMessagesDiv.innerHTML = '';
+        chatMessagesDiv.innerHTML = '<div class="loading-messages">Loading messages...</div>';
         messageOffset = 0;
         hasMoreMessages = true;
         if (roomName.startsWith('group_')) {
@@ -1425,12 +1484,17 @@
         try {
             const response = await fetch(`/history/${roomName}?offset=0&limit=50`);
             const data = await response.json();
+            if (currentRoom !== loadingRoomName) {
+                isLoadingHistory = false;
+                return;
+            }
+            chatMessagesDiv.innerHTML = '';
             if (data.error) {
-                showOverlay(data.error);
                 currentRoom = null;
                 currentChatHeader.textContent = "Error loading chat.";
                 callIcons.style.display = 'none';
                 editGroupBtn.style.display = 'none';
+                isLoadingHistory = false;
                 return;
             }
             const usersInChat = [...new Set(data.messages.map(msg => msg.username))];
@@ -1441,15 +1505,18 @@
             scrollToBottom();
         } catch (error) {
             console.error("Error loading chat history:", error);
-            showOverlay("Failed to load chat history. Please try again.");
-            currentRoom = null;
-            currentChatHeader.textContent = "Error loading chat.";
-            callIcons.style.display = 'none';
-            editGroupBtn.style.display = 'none';
+            if (currentRoom === loadingRoomName) {
+                chatMessagesDiv.innerHTML = '';
+                currentRoom = null;
+                currentChatHeader.textContent = "Error loading chat.";
+                callIcons.style.display = 'none';
+                editGroupBtn.style.display = 'none';
+            }
         } finally {
             isLoadingHistory = false;
         }
     }
+
     async function loadUserProfiles(usernames) {
         try {
             const response = await fetch('/get_user_profiles', {
@@ -1471,7 +1538,53 @@
             console.error('Error loading user profiles:', error);
         }
     }
+
+    async function loadContactsWithTimestamps() {
+        try {
+            const response = await fetch('/get_contacts_order');
+            const data = await response.json();
+            if (data.contacts) {
+                const orderMap = {};
+                data.contacts.forEach((contact, index) => {
+                    orderMap[contact.id] = {
+                        order: index,
+                        unread_count: contact.unread_count || 0,
+                        last_message_timestamp: contact.last_message_timestamp || 0
+                    };
+                });
+                const items = Array.from(friendListUl.querySelectorAll('li'));
+                items.sort((a, b) => {
+                    const aId = a.dataset.roomId || a.dataset.friendUsername;
+                    const bId = b.dataset.roomId || b.dataset.friendUsername;
+                    const aTimestamp = orderMap[aId] ? orderMap[aId].last_message_timestamp : 0;
+                    const bTimestamp = orderMap[bId] ? orderMap[bId].last_message_timestamp : 0;
+                    return bTimestamp - aTimestamp;
+                });
+                friendListUl.innerHTML = '';
+                items.forEach(item => {
+                    const itemId = item.dataset.roomId || item.dataset.friendUsername;
+                    const contactData = orderMap[itemId];
+                    const existingIndicator = item.querySelector('.unread-indicator');
+                    if (existingIndicator) existingIndicator.remove();
+                    if (contactData && contactData.unread_count > 0) {
+                        const unreadBadge = document.createElement('span');
+                        unreadBadge.classList.add('unread-indicator');
+                        unreadBadge.textContent = contactData.unread_count;
+                        item.querySelector('span').appendChild(unreadBadge);
+                    }
+                    friendListUl.appendChild(item);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading contact order:', error);
+        }
+    }
+
     sendButton.addEventListener('click', () => {
+        if (!socket.connected) {
+            showOverlay("You are disconnected. Please wait while we reconnect...");
+            return;
+        }
         const messageText = messageInput.value.trim();
         if (messageText && currentRoom) {
             if (messageText.length > MAX_MESSAGE_LENGTH) {
@@ -1493,15 +1606,18 @@
             messageInput.focus();
             cancelReply();
             socket.emit('typing_stop', { room: currentRoom });
+            loadContactsWithTimestamps();
         } else if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
         }
     });
+
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendButton.click();
         }
     });
+
     messageInput.addEventListener('input', () => {
         if (currentRoom) {
             socket.emit('typing_start', { room: currentRoom });
@@ -1511,6 +1627,7 @@
             }, 1000);
         }
     });
+
     messageInput.addEventListener('paste', async (e) => {
         const items = e.clipboardData.items;
         for (let i = 0; i < items.length; i++) {
@@ -1522,6 +1639,7 @@
             }
         }
     });
+
     document.addEventListener('paste', async (e) => {
         if (document.activeElement !== messageInput) return;
         const items = e.clipboardData.items;
@@ -1534,6 +1652,7 @@
             }
         }
     });
+
     function showMediaPreview(file) {
         if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
@@ -1555,6 +1674,7 @@
         }
         mediaPreviewModal.classList.add('active');
     }
+
     sendMediaBtn.addEventListener('click', async () => {
         if (!pendingMediaFile) return;
         mediaPreviewModal.classList.remove('active');
@@ -1598,11 +1718,13 @@
             pendingMediaFile = null;
         }
     });
+
     cancelMediaBtn.addEventListener('click', () => {
         mediaPreviewModal.classList.remove('active');
         pendingMediaFile = null;
         mediaPreviewContainer.innerHTML = '';
     });
+
     fileInput.addEventListener('change', async (event) => {
         if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
@@ -1614,6 +1736,7 @@
         showMediaPreview(file);
         fileInput.value = '';
     });
+
     function startEditMessage(messageId, currentMessageText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (!messageElement) return;
@@ -1644,6 +1767,7 @@
         input.focus();
         input.select();
     }
+
     function confirmEditMessage(messageId, newText, inputElement, onBlur = false) {
         const originalText = inputElement.defaultValue;
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
@@ -1680,6 +1804,7 @@
         const actionsDiv = messageElement.querySelector('.message-actions');
         if (actionsDiv) actionsDiv.style.display = '';
     }
+
     function deleteMessage(messageId) {
         if (confirm("Are you sure you want to delete this message?")) {
             socket.emit('delete_message', {
@@ -1688,6 +1813,7 @@
             });
         }
     }
+
     // WebRTC Functions
     async function loadAvailableDevices() {
         try {
@@ -1718,6 +1844,7 @@
             console.error('Error loading devices:', error);
         }
     }
+
     async function switchMediaDevice(deviceType, deviceId) {
         if (!localStream) return;
         try {
@@ -1763,6 +1890,7 @@
             showOverlay('Failed to switch device. Please try again.');
         }
     }
+
     function addSystemMessage(message, icon = 'phone') {
         const systemDiv = document.createElement('div');
         systemDiv.classList.add('system-message');
@@ -1770,6 +1898,7 @@
         chatMessagesDiv.appendChild(systemDiv);
         scrollToBottom();
     }
+
     function logCallToChat(callType, action, otherUser) {
         let message = '';
         const icon = callType === 'video' ? 'video' : 'phone';
@@ -1782,6 +1911,7 @@
         }
         addSystemMessage(message, icon);
     }
+
     async function startCall(callType) {
         if (!currentRoom) {
             showOverlay("Please select a friend to call.");
@@ -1826,6 +1956,7 @@
             closeCall();
         }
     }
+
     async function answerCall() {
         if (!incomingCallData) return;
         try {
@@ -1865,6 +1996,7 @@
             rejectCall();
         }
     }
+
     function rejectCall() {
         if (!incomingCallData) return;
         socket.emit('reject_call', {
@@ -1875,6 +2007,7 @@
         logCallToChat(incomingCallData.type, 'missed', incomingCallData.caller);
         incomingCallData = null;
     }
+
     function closeCall() {
         const wasActive = isCallActive;
         const callType = currentCallType;
@@ -1912,6 +2045,7 @@
         currentCallType = null;
         incomingCallData = null;
     }
+
     async function createPeerConnection() {
         peerConnection = new RTCPeerConnection(configuration);
         localStream.getTracks().forEach(track => {
@@ -1932,7 +2066,6 @@
             }
         };
         peerConnection.onconnectionstatechange = () => {
-            console.log('Connection state:', peerConnection.connectionState);
             if (peerConnection.connectionState === 'connected') {
                 callStatus.textContent = 'Connected';
             } else if (peerConnection.connectionState === 'disconnected' || 
@@ -1941,6 +2074,7 @@
             }
         };
     }
+
     function toggleMuteAudio() {
         if (localStream) {
             const audioTrack = localStream.getAudioTracks()[0];
@@ -1952,6 +2086,7 @@
             }
         }
     }
+
     function toggleMuteVideo() {
         if (localStream) {
             const videoTrack = localStream.getVideoTracks()[0];
@@ -1963,6 +2098,7 @@
             }
         }
     }
+
     async function toggleShareScreen() {
         if (!isCallActive) {
             showOverlay('You must be in a call to share your screen');
@@ -1970,25 +2106,21 @@
         }
         try {
             if (!isSharingScreen) {
-                // Start screen sharing
                 screenStream = await navigator.mediaDevices.getDisplayMedia({
                     video: { cursor: "always" },
                     audio: false
                 });
                 const screenTrack = screenStream.getVideoTracks()[0];
-                // Replace video track in peer connection
                 if (peerConnection) {
                     const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
                         await sender.replaceTrack(screenTrack);
                     }
                 }
-                // Update local video to show screen share
                 localVideo.srcObject = screenStream;
                 isSharingScreen = true;
                 shareScreenBtn.classList.add('active');
                 shareScreenBtn.innerHTML = '<i class="fas fa-desktop"></i> Stop';
-                // Handle when user stops sharing from browser UI
                 screenTrack.onended = () => {
                     stopShareScreen();
                 };
@@ -2000,12 +2132,12 @@
             showOverlay('Failed to share screen. Please check permissions.');
         }
     }
+
     async function stopShareScreen() {
         if (screenStream) {
             screenStream.getTracks().forEach(track => track.stop());
             screenStream = null;
         }
-        // Switch back to camera
         if (localStream && currentCallType === 'video') {
             const videoTrack = localStream.getVideoTracks()[0];
             if (videoTrack && peerConnection) {
@@ -2020,6 +2152,7 @@
         shareScreenBtn.classList.remove('active');
         shareScreenBtn.innerHTML = '<i class="fas fa-desktop"></i>';
     }
+
     function toggleMinimizeCall() {
         isCallMinimized = !isCallMinimized;
         callModal.classList.toggle('minimized');
@@ -2032,13 +2165,16 @@
             minimizeCallBtn.title = 'Minimize';
         }
     }
+
     function openDeviceSettings() {
         loadAvailableDevices();
         deviceSettingsModal.classList.add('active');
     }
+
     function closeDeviceSettings() {
         deviceSettingsModal.classList.remove('active');
     }
+
     async function saveDeviceSettings() {
         const selectedMic = microphoneSelect.value;
         const selectedCam = cameraSelect.value;
@@ -2055,6 +2191,7 @@
         }
         closeDeviceSettings();
     }
+
     audioCallBtn.addEventListener('click', () => startCall('audio'));
     videoCallBtn.addEventListener('click', () => startCall('video'));
     endCallBtn.addEventListener('click', closeCall);
@@ -2072,6 +2209,7 @@
             toggleMinimizeCall();
         }
     });
+
     // Socket.IO Events
     socket.on('connect', () => {
         console.log('Connected to Socket.IO');
@@ -2082,6 +2220,7 @@
             .map(li => li.dataset.friendUsername);
         if (friendUsernames.length > 0) {
             loadUserProfiles(friendUsernames);
+            loadContactsWithTimestamps();
         }
         const storedRoomType = localStorage.getItem('activeRoomType');
         if (storedRoomType === 'group') {
@@ -2099,6 +2238,7 @@
             }
         }
     });
+
     socket.on('message', (data) => {
         if (data.room === currentRoom) {
             if (!userProfiles[data.username]) {
@@ -2108,8 +2248,38 @@
             if (isAtBottom) {
                 scrollToBottom();
             }
+            loadContactsWithTimestamps();
+        } else {
+            if (data.username !== username) {
+                let contactLi;
+                if (data.room.startsWith('group_')) {
+                    contactLi = friendListUl.querySelector(`li[data-room-id="${data.room}"]`);
+                } else {
+                    const otherUser = data.room.replace(username + '-', '').replace('-' + username, '');
+                    contactLi = friendListUl.querySelector(`li[data-friend-username="${otherUser}"]`);
+                }
+                if (contactLi) {
+                    let unreadBadge = contactLi.querySelector('.unread-indicator');
+                    if (!unreadBadge) {
+                        unreadBadge = document.createElement('span');
+                        unreadBadge.classList.add('unread-indicator');
+                        unreadBadge.textContent = '1';
+                        const mainSpan = contactLi.querySelector('span');
+                        if (mainSpan) {
+                            mainSpan.appendChild(unreadBadge);
+                        }
+                    } else {
+                        const count = parseInt(unreadBadge.textContent) + 1;
+                        unreadBadge.textContent = count;
+                    }
+                    friendListUl.removeChild(contactLi);
+                    friendListUl.insertBefore(contactLi, friendListUl.firstChild);
+                }
+            }
         }
+        loadContactsWithTimestamps();
     });
+
     socket.on('message_updated', (data) => {
         if (data.room === currentRoom) {
             const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
@@ -2118,9 +2288,9 @@
             updateMessage(data.id, newTextWithEditedTag);
         }
     });
+
     socket.on('error', (data) => {
         console.error('Socket Error:', data.message);
-        showOverlay(data.message);
         if (data.message.includes('not friends') || data.message.includes('blocked') || 
             data.message.includes('Unauthorized') || data.message.includes('not a member')) {
             currentRoom = null;
@@ -2132,13 +2302,40 @@
                 selectChatPrompt.style.display = 'block';
                 selectChatPrompt.textContent = "Select a friend or group from the sidebar to start chatting.";
             }
+        } else {
+            showOverlay(data.message);
         }
     });
+
     socket.on('disconnect', () => {
         console.log('Disconnected from Socket.IO');
-        socket.emit('user_disconnected');
-        showOverlay("Disconnected from chat server. Please refresh or check your internet connection.");
+        showOverlay("Disconnected from chat server. Attempting to reconnect...");
     });
+
+    socket.on('reconnect', (attemptNumber) => {
+        console.log('Reconnected to Socket.IO');
+        hideOverlay();
+        if (currentRoom) {
+            socket.emit('join', { room: currentRoom });
+        }
+        socket.emit('user_connected');
+        userStatus = 'online';
+        socket.emit('request_statuses');
+    });
+
+    socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log(`Reconnection attempt ${attemptNumber}`);
+    });
+
+    socket.on('reconnect_error', (error) => {
+        console.error('Reconnection error:', error);
+    });
+
+    socket.on('reconnect_failed', () => {
+        console.error('Reconnection failed');
+        showOverlay("Failed to reconnect to chat server. Please refresh the page.");
+    });
+
     socket.on('user_status_update', (data) => {
         const statusIndicator = document.querySelector(`.status-indicator[data-username="${data.username}"]`);
         if (statusIndicator) {
@@ -2147,6 +2344,7 @@
         }
         connectedUsers[data.username] = data.status;
     });
+
     socket.on('user_typing', (data) => {
         const typingIndicator = document.getElementById('typing-indicator');
         if (data.is_typing) {
@@ -2171,6 +2369,7 @@
             }
         }
     });
+
     socket.on('all_statuses', (data) => {
         Object.keys(data).forEach(username => {
             const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
@@ -2180,12 +2379,14 @@
             }
         });
     });
+
     socket.on('incoming_call', (data) => {
         incomingCallData = data;
         document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
         document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
         incomingCallModal.classList.add('active');
     });
+
     socket.on('call_answered', async (data) => {
         callStatus.textContent = 'Connecting...';
         await createPeerConnection();
@@ -2198,14 +2399,17 @@
         const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
         logCallToChat(currentCallType, 'started', otherUser);
     });
+
     socket.on('call_rejected', (data) => {
         showOverlay(`${data.rejecter} rejected your call.`);
         closeCall();
     });
+
     socket.on('call_ended', (data) => {
         showOverlay('Call ended.');
         closeCall();
     });
+
     socket.on('webrtc_offer', async (data) => {
         if (!peerConnection) {
             await createPeerConnection();
@@ -2218,14 +2422,17 @@
             answer: answer
         });
     });
+
     socket.on('webrtc_answer', async (data) => {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
     });
+
     socket.on('webrtc_ice_candidate', async (data) => {
         if (peerConnection && data.candidate) {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     });
+
     // Mobile keyboard handling
     const chatArea = document.querySelector('.chat-area');
     let isAboutToSend = false;
