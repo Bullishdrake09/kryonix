@@ -111,8 +111,39 @@
     border-radius: 10px;
     margin-left: auto;
     font-weight: 600;
-    min-width: 18px; /* Ensure space for single digits */
+    min-width: 18px;
     text-align: center;
+}
+/* Contact List with Last Message Preview */
+.friends-list ul li {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 16px;
+}
+.contact-info {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+}
+.contact-details {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+.contact-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.last-message-preview {
+    font-size: 0.8rem;
+    color: var(--gray);
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 /* Media Preview Modal */
 .media-preview-modal {
@@ -374,8 +405,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     word-wrap: break-word;
-    word-break: break-word; /* Add this */
-    white-space: nowrap; /* Keep this for single line in input preview */
+    word-break: break-word;
+    white-space: nowrap;
     max-width: 90%;
 }
 .reply-preview-close {
@@ -405,8 +436,8 @@
     max-width: 100%;
     overflow: hidden;
     word-wrap: break-word;
-    word-break: break-word; /* Add this */
-    white-space: normal; /* Add this */
+    word-break: break-word;
+    white-space: normal;
 }
 .message-reply-context:hover {
     background: rgba(138, 43, 226, 0.2);
@@ -424,10 +455,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     word-wrap: break-word;
-    word-break: break-word; /* Add this */
-    white-space: normal; /* Add this */
+    word-break: break-word;
+    white-space: normal;
     max-width: 100%;
-    display: -webkit-box; /* Add these for multi-line ellipsis */
+    display: -webkit-box;
     -webkit-box-orient: vertical;
 }
 .message.highlighted {
@@ -522,19 +553,33 @@
                 {% endif %}
                 {% for group in group_chats %}
                 <li data-room-id="{{ group.id }}" data-room-type="group" data-room-name="{{ group.name }}">
-                    <div class="friend-avatar" style="background: var(--primary);">
-                        <i class="fas fa-users"></i>
+                    <div class="contact-info">
+                        <div class="friend-avatar" style="background: var(--primary);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="contact-details">
+                            <div class="contact-name">
+                                <span>{{ group.name }} <span class="group-indicator">GROUP</span></span>
+                            </div>
+                            <div class="last-message-preview" data-contact-id="{{ group.id }}"></div>
+                        </div>
                     </div>
-                    <span>{{ group.name }} <span class="group-indicator">GROUP</span></span>
                 </li>
                 {% endfor %}
                 {% for friend in friends_list %}
                 <li data-friend-username="{{ friend }}" data-room-type="direct">
-                    <div class="friend-avatar">
-                        <span id="avatar-{{ friend }}">{{ friend[0].upper() }}</span>
-                        <span class="status-indicator online" data-username="{{ friend }}"></span>
+                    <div class="contact-info">
+                        <div class="friend-avatar">
+                            <span id="avatar-{{ friend }}">{{ friend[0].upper() }}</span>
+                            <span class="status-indicator online" data-username="{{ friend }}"></span>
+                        </div>
+                        <div class="contact-details">
+                            <div class="contact-name">
+                                <span>{{ friend }}</span>
+                            </div>
+                            <div class="last-message-preview" data-contact-id="{{ friend }}"></div>
+                        </div>
                     </div>
-                    <span>{{ friend }}</span>
                 </li>
                 {% endfor %}
             </ul>
@@ -1582,51 +1627,62 @@
         }
     }
     async function loadContactsWithTimestamps() {
-        try {
-            const response = await fetch('/get_contacts_order');
-            const data = await response.json();
-            if (data.contacts) {
-                const orderMap = {};
-                data.contacts.forEach((contact, index) => {
-                    orderMap[contact.id] = {
-                        order: index,
-                        unread_count: contact.unread_count || 0,
-                        last_message_timestamp: contact.last_message_timestamp || 0
-                    };
-                });
-                const items = Array.from(friendListUl.querySelectorAll('li'));
-                items.sort((a, b) => {
-                    const aId = a.dataset.roomId || a.dataset.friendUsername;
-                    const bId = b.dataset.roomId || b.dataset.friendUsername;
-                    const aTimestamp = orderMap[aId] ? orderMap[aId].last_message_timestamp : 0;
-                    const bTimestamp = orderMap[bId] ? orderMap[bId].last_message_timestamp : 0;
-                    return bTimestamp - aTimestamp;
-                });
-                friendListUl.innerHTML = '';
-                items.forEach(item => {
-                    const itemId = item.dataset.roomId || item.dataset.friendUsername;
-                    const contactData = orderMap[itemId];
-                    const existingIndicator = item.querySelector('.unread-indicator');
-                    if (existingIndicator) existingIndicator.remove();
-                    // Use localStorage count if available, otherwise use server count
-                    const storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
-                    const storedCount = storedUnreads[itemId] || 0;
-                    const serverCount = contactData ? contactData.unread_count : 0;
-                    // Prioritize stored count if it's higher (e.g., after a page refresh before reconnect)
-                    const finalCount = Math.max(storedCount, serverCount);
-                    if (finalCount > 0) {
-                        const unreadBadge = document.createElement('span');
-                        unreadBadge.classList.add('unread-indicator');
-                        unreadBadge.textContent = finalCount;
-                        item.querySelector('span').appendChild(unreadBadge);
-                    }
-                    friendListUl.appendChild(item);
-                });
-            }
-        } catch (error) {
-            console.error('Error loading contact order:', error);
+    try {
+        const response = await fetch('/get_contacts_order');
+        const data = await response.json();
+        if (data.contacts) {
+            const orderMap = {};
+            data.contacts.forEach((contact, index) => {
+                orderMap[contact.id] = {
+                    order: index,
+                    unread_count: contact.unread_count || 0,
+                    last_message_timestamp: contact.last_message_timestamp || 0,
+                    last_message_text: contact.last_message_text || '' // ADD THIS
+                };
+            });
+            const items = Array.from(friendListUl.querySelectorAll('li'));
+            items.sort((a, b) => {
+                const aId = a.dataset.roomId || a.dataset.friendUsername;
+                const bId = b.dataset.roomId || b.dataset.friendUsername;
+                const aTimestamp = orderMap[aId] ? orderMap[aId].last_message_timestamp : 0;
+                const bTimestamp = orderMap[bId] ? orderMap[bId].last_message_timestamp : 0;
+                return bTimestamp - aTimestamp;
+            });
+            friendListUl.innerHTML = '';
+            items.forEach(item => {
+                const itemId = item.dataset.roomId || item.dataset.friendUsername;
+                const contactData = orderMap[itemId];
+                const existingIndicator = item.querySelector('.unread-indicator');
+                if (existingIndicator) existingIndicator.remove();
+                
+                // Use localStorage count if available, otherwise use server count
+                const storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+                const storedCount = storedUnreads[itemId] || 0;
+                const serverCount = contactData ? contactData.unread_count : 0;
+                const finalCount = Math.max(storedCount, serverCount);
+                
+                if (finalCount > 0) {
+                    const unreadBadge = document.createElement('span');
+                    unreadBadge.classList.add('unread-indicator');
+                    unreadBadge.textContent = finalCount;
+                    item.querySelector('span').appendChild(unreadBadge);
+                }
+                
+                // UPDATE LAST MESSAGE PREVIEW - ADD THIS SECTION
+                const lastMsgPreview = item.querySelector('.last-message-preview');
+                if (lastMsgPreview && contactData) {
+                    const msgText = contactData.last_message_text || '';
+                    const cleanText = stripHtmlForPreview(msgText);
+                    lastMsgPreview.textContent = cleanText.substring(0, 40) + (cleanText.length > 40 ? '...' : '');
+                }
+                
+                friendListUl.appendChild(item);
+            });
         }
+    } catch (error) {
+        console.error('Error loading contact order:', error);
     }
+}
     sendButton.addEventListener('click', () => {
         if (!socket.connected) {
             showOverlay("You are disconnected. Please wait while we reconnect...");
@@ -2309,37 +2365,45 @@
                     contactLi = friendListUl.querySelector(`li[data-friend-username="${otherUser}"]`);
                     roomIdOrName = data.room;
                 }
+                // Around line 1380-1420, inside the else block where messages from other rooms are handled
                 if (contactLi) {
-                    // Move to top
-                    friendListUl.removeChild(contactLi);
-                    friendListUl.insertBefore(contactLi, friendListUl.firstChild);
+    // Move to top
+    friendListUl.removeChild(contactLi);
+    friendListUl.insertBefore(contactLi, friendListUl.firstChild);
 
-                    // Increment unread badge using localStorage
-                    let storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
-                    const currentCount = storedUnreads[roomIdOrName] || 0;
-                    const newCount = currentCount + 1;
-                    storedUnreads[roomIdOrName] = newCount;
-                    localStorage.setItem('unreadCounts', JSON.stringify(storedUnreads));
+    // Increment unread badge using localStorage
+    let storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+    const currentCount = storedUnreads[roomIdOrName] || 0;
+    const newCount = currentCount + 1;
+    storedUnreads[roomIdOrName] = newCount;
+    localStorage.setItem('unreadCounts', JSON.stringify(storedUnreads));
 
-                    // Update the UI badge
-                    let unreadBadge = contactLi.querySelector('.unread-indicator');
-                    if (!unreadBadge) {
-                        unreadBadge = document.createElement('span');
-                        unreadBadge.classList.add('unread-indicator');
-                        unreadBadge.textContent = newCount.toString();
-                        const mainSpan = contactLi.querySelector('span');
-                        if (mainSpan) {
-                            mainSpan.appendChild(unreadBadge);
-                        }
-                    } else {
-                        unreadBadge.textContent = newCount.toString();
-                    }
+    // Update the UI badge
+    let unreadBadge = contactLi.querySelector('.unread-indicator');
+    if (!unreadBadge) {
+        unreadBadge = document.createElement('span');
+        unreadBadge.classList.add('unread-indicator');
+        unreadBadge.textContent = newCount.toString();
+        const mainSpan = contactLi.querySelector('span');
+        if (mainSpan) {
+            mainSpan.appendChild(unreadBadge);
+        }
+    } else {
+        unreadBadge.textContent = newCount.toString();
+    }
+    
+    // UPDATE LAST MESSAGE PREVIEW - ADD THESE LINES HERE
+    const lastMsgPreview = contactLi.querySelector('.last-message-preview');
+    if (lastMsgPreview) {
+        const cleanText = stripHtmlForPreview(data.msg);
+        lastMsgPreview.textContent = cleanText.substring(0, 40) + (cleanText.length > 40 ? '...' : '');
+    }
 
-                    // Show notification and play sound ONLY when message is for a different room
-                    const sender = data.username;
-                    const chatName = contactLi.querySelector('span').textContent.replace(' GROUP', '');
-                    showNotificationAndPlaySound(sender, data.msg, data.room);
-                }
+    // Show notification and play sound ONLY when message is for a different room
+    const sender = data.username;
+    const chatName = contactLi.querySelector('span').textContent.replace(' GROUP', '');
+    showNotificationAndPlaySound(sender, data.msg, data.room);
+}
             }
         }
         // Update chat order in real-time

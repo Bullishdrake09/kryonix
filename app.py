@@ -915,11 +915,13 @@ def get_contacts_order():
                     except:
                         last_message_timestamp = 0
             
+            # Around line 1060-1090, in the loop where you process direct message contacts
             contacts.append({
                 'id': friend,
                 'type': 'direct',
                 'last_message_time': last_message_time,
                 'last_message_timestamp': last_message_timestamp,
+                'last_message_text': messages[-1].get('msg', '') if messages else '',  # ADD THIS LINE
                 'unread_count': 0
             })
         
@@ -943,12 +945,14 @@ def get_contacts_order():
                         except:
                             last_message_timestamp = 0
                 
+                # And for group chats (around line 1110)
                 contacts.append({
                     'id': group_id,
                     'type': 'group',
                     'name': group_data.get('name', 'Unnamed Group'),
                     'last_message_time': last_message_time,
                     'last_message_timestamp': last_message_timestamp,
+                    'last_message_text': messages[-1].get('msg', '') if messages else '',  # ADD THIS LINE
                     'unread_count': 0
                 })
         
