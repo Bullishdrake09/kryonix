@@ -111,6 +111,8 @@
     border-radius: 10px;
     margin-left: auto;
     font-weight: 600;
+    min-width: 18px; /* Ensure space for single digits */
+    text-align: center;
 }
 /* Media Preview Modal */
 .media-preview-modal {
@@ -372,6 +374,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     word-wrap: break-word;
+    word-break: break-word; /* Add this */
+    white-space: nowrap; /* Keep this for single line in input preview */
     max-width: 90%;
 }
 .reply-preview-close {
@@ -401,6 +405,8 @@
     max-width: 100%;
     overflow: hidden;
     word-wrap: break-word;
+    word-break: break-word; /* Add this */
+    white-space: normal; /* Add this */
 }
 .message-reply-context:hover {
     background: rgba(138, 43, 226, 0.2);
@@ -418,7 +424,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     word-wrap: break-word;
+    word-break: break-word; /* Add this */
+    white-space: normal; /* Add this */
     max-width: 100%;
+    display: -webkit-box; /* Add these for multi-line ellipsis */
+    -webkit-box-orient: vertical;
 }
 .message.highlighted {
     animation: highlight-pulse 1s ease-in-out;
@@ -468,6 +478,9 @@
     }
 }
 </style>
+<!-- Hidden audio element for notifications -->
+<audio id="notification-sound" src="static/message.mp3" preload="auto"></audio>
+
 <div class="mobile-header" id="mobile-header">
     <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
     <h2 id="mobile-chat-title">Kryonix Chat</h2>
@@ -812,6 +825,12 @@
         audioInput: null,
         videoInput: null
     };
+    // Notification sound element
+    const notificationSound = document.getElementById('notification-sound');
+
+    // Page visibility and focus state
+    let isPageVisible = true;
+    let isPageFocused = true;
 
     socket.on('connect', () => {
         isConnected = true;
@@ -867,6 +886,25 @@
         }
     });
 
+    // Page visibility and focus event listeners
+    document.addEventListener('visibilitychange', () => {
+        isPageVisible = !document.hidden;
+        if (isPageVisible) {
+            // Clear title when page becomes visible again
+            document.title = 'Kryonix Chat';
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        isPageFocused = true;
+        // Clear title when window gains focus
+        document.title = 'Kryonix Chat';
+    });
+
+    window.addEventListener('blur', () => {
+        isPageFocused = false;
+    });
+
     // Sidebar toggle functionality
     menuToggle.addEventListener('click', () => {
         sidebar.classList.add('active');
@@ -888,7 +926,6 @@
             }
         });
     });
-
     // Create group functionality
     createGroupBtn.addEventListener('click', () => {
         groupModalTitle.textContent = 'Create New Group';
@@ -1012,7 +1049,6 @@
             showOverlay('Failed to load group info');
         }
     });
-
     showAddMembersBtn.addEventListener('click', () => {
         if (addMembersSection.style.display === 'none') {
             addMemberSelection.innerHTML = '';
@@ -1040,7 +1076,6 @@
             addMembersSection.style.display = 'none';
         }
     });
-
     confirmAddMembers.addEventListener('click', async () => {
         const selectedMembers = Array.from(addMemberSelection.querySelectorAll('input[type="checkbox"]:checked'))
             .map(cb => cb.value);
@@ -1073,7 +1108,6 @@
             showOverlay('Failed to add members');
         }
     });
-
     async function kickMember(memberUsername) {
         if (!confirm(`Are you sure you want to kick ${memberUsername} from the group?`)) {
             return;
@@ -1101,7 +1135,6 @@
             showOverlay('Failed to kick member');
         }
     }
-
     saveGroupBtn.addEventListener('click', async () => {
         if (!currentGroupInfo || !currentGroupInfo.is_creator) return;
         const newName = editGroupNameInput.value.trim();
@@ -1138,7 +1171,6 @@
             showOverlay('Failed to rename group');
         }
     });
-
     leaveGroupBtn.addEventListener('click', async () => {
         if (!confirm('Are you sure you want to leave this group?')) {
             return;
@@ -1201,6 +1233,17 @@
     });
 
     function selectRoom(roomId, roomType, roomName, targetLi = null) {
+        // Clear unread indicator when opening chat
+        if (targetLi) {
+            const unreadBadge = targetLi.querySelector('.unread-indicator');
+            if (unreadBadge) {
+                unreadBadge.remove();
+                // Update localStorage
+                const storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+                delete storedUnreads[roomId];
+                localStorage.setItem('unreadCounts', JSON.stringify(storedUnreads));
+            }
+        }
         currentRoomType = roomType;
         const newRoomName = roomId;
         if (currentRoom) {
@@ -1232,6 +1275,18 @@
     }
 
     function selectFriend(friendUsername, targetLi = null) {
+        // Clear unread indicator when opening chat
+        if (targetLi) {
+            const unreadBadge = targetLi.querySelector('.unread-indicator');
+            if (unreadBadge) {
+                unreadBadge.remove();
+                 // Update localStorage
+                const storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+                const roomName = [username, friendUsername].sort().join('-');
+                delete storedUnreads[roomName];
+                localStorage.setItem('unreadCounts', JSON.stringify(storedUnreads));
+            }
+        }
         currentRoomType = 'direct';
         const newRoomName = [username, friendUsername].sort().join('-');
         if (currentRoom) {
@@ -1264,11 +1319,9 @@
         overlayMessage.textContent = message;
         statusOverlay.classList.add('active');
     }
-
     function hideOverlay() {
         statusOverlay.classList.remove('active');
     }
-
     function scrollToBottom() {
         if (!userScrolledUp) {
             setTimeout(() => {
@@ -1276,13 +1329,11 @@
             }, 100);
         }
     }
-
     function stripHtmlForPreview(html) {
         const div = document.createElement('div');
         div.innerHTML = html;
         return div.textContent || div.innerText || '';
     }
-
     function scrollToMessage(messageId) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (messageElement) {
@@ -1293,7 +1344,6 @@
             }, 1000);
         }
     }
-
     function addMessage(msg, prepend = false) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
@@ -1389,7 +1439,6 @@
             chatMessagesDiv.appendChild(messageDiv);
         }
     }
-
     function startReply(messageId, messageUsername, messageText) {
         replyingTo = {
             id: messageId,
@@ -1401,14 +1450,11 @@
         replyPreview.style.display = 'flex';
         messageInput.focus();
     }
-
     function cancelReply() {
         replyingTo = null;
         replyPreview.style.display = 'none';
     }
-
     cancelReplyBtn.addEventListener('click', cancelReply);
-
     function updateMessage(messageId, newText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (messageElement) {
@@ -1428,7 +1474,6 @@
             }
         }
     }
-
     async function loadMoreMessages() {
         if (!currentRoom || isLoadingMore || !hasMoreMessages) return;
         isLoadingMore = true;
@@ -1465,7 +1510,6 @@
             isLoadingMore = false;
         }
     }
-
     async function loadChatHistory(roomName) {
         if (isLoadingHistory) return;
         const loadingRoomName = roomName;
@@ -1516,7 +1560,6 @@
             isLoadingHistory = false;
         }
     }
-
     async function loadUserProfiles(usernames) {
         try {
             const response = await fetch('/get_user_profiles', {
@@ -1538,7 +1581,6 @@
             console.error('Error loading user profiles:', error);
         }
     }
-
     async function loadContactsWithTimestamps() {
         try {
             const response = await fetch('/get_contacts_order');
@@ -1566,10 +1608,16 @@
                     const contactData = orderMap[itemId];
                     const existingIndicator = item.querySelector('.unread-indicator');
                     if (existingIndicator) existingIndicator.remove();
-                    if (contactData && contactData.unread_count > 0) {
+                    // Use localStorage count if available, otherwise use server count
+                    const storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+                    const storedCount = storedUnreads[itemId] || 0;
+                    const serverCount = contactData ? contactData.unread_count : 0;
+                    // Prioritize stored count if it's higher (e.g., after a page refresh before reconnect)
+                    const finalCount = Math.max(storedCount, serverCount);
+                    if (finalCount > 0) {
                         const unreadBadge = document.createElement('span');
                         unreadBadge.classList.add('unread-indicator');
-                        unreadBadge.textContent = contactData.unread_count;
+                        unreadBadge.textContent = finalCount;
                         item.querySelector('span').appendChild(unreadBadge);
                     }
                     friendListUl.appendChild(item);
@@ -1579,7 +1627,6 @@
             console.error('Error loading contact order:', error);
         }
     }
-
     sendButton.addEventListener('click', () => {
         if (!socket.connected) {
             showOverlay("You are disconnected. Please wait while we reconnect...");
@@ -1611,13 +1658,11 @@
             showOverlay("Please select a friend or group to chat with first.");
         }
     });
-
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendButton.click();
         }
     });
-
     messageInput.addEventListener('input', () => {
         if (currentRoom) {
             socket.emit('typing_start', { room: currentRoom });
@@ -1627,7 +1672,6 @@
             }, 1000);
         }
     });
-
     messageInput.addEventListener('paste', async (e) => {
         const items = e.clipboardData.items;
         for (let i = 0; i < items.length; i++) {
@@ -1639,7 +1683,6 @@
             }
         }
     });
-
     document.addEventListener('paste', async (e) => {
         if (document.activeElement !== messageInput) return;
         const items = e.clipboardData.items;
@@ -1652,7 +1695,6 @@
             }
         }
     });
-
     function showMediaPreview(file) {
         if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
@@ -1674,7 +1716,6 @@
         }
         mediaPreviewModal.classList.add('active');
     }
-
     sendMediaBtn.addEventListener('click', async () => {
         if (!pendingMediaFile) return;
         mediaPreviewModal.classList.remove('active');
@@ -1718,13 +1759,11 @@
             pendingMediaFile = null;
         }
     });
-
     cancelMediaBtn.addEventListener('click', () => {
         mediaPreviewModal.classList.remove('active');
         pendingMediaFile = null;
         mediaPreviewContainer.innerHTML = '';
     });
-
     fileInput.addEventListener('change', async (event) => {
         if (!currentRoom) {
             showOverlay("Please select a friend or group to chat with first.");
@@ -1736,7 +1775,6 @@
         showMediaPreview(file);
         fileInput.value = '';
     });
-
     function startEditMessage(messageId, currentMessageText) {
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
         if (!messageElement) return;
@@ -1767,7 +1805,6 @@
         input.focus();
         input.select();
     }
-
     function confirmEditMessage(messageId, newText, inputElement, onBlur = false) {
         const originalText = inputElement.defaultValue;
         const messageElement = chatMessagesDiv.querySelector(`[data-message-id="${messageId}"]`);
@@ -1804,7 +1841,6 @@
         const actionsDiv = messageElement.querySelector('.message-actions');
         if (actionsDiv) actionsDiv.style.display = '';
     }
-
     function deleteMessage(messageId) {
         if (confirm("Are you sure you want to delete this message?")) {
             socket.emit('delete_message', {
@@ -1813,7 +1849,6 @@
             });
         }
     }
-
     // WebRTC Functions
     async function loadAvailableDevices() {
         try {
@@ -1844,7 +1879,6 @@
             console.error('Error loading devices:', error);
         }
     }
-
     async function switchMediaDevice(deviceType, deviceId) {
         if (!localStream) return;
         try {
@@ -1890,7 +1924,6 @@
             showOverlay('Failed to switch device. Please try again.');
         }
     }
-
     function addSystemMessage(message, icon = 'phone') {
         const systemDiv = document.createElement('div');
         systemDiv.classList.add('system-message');
@@ -1898,7 +1931,6 @@
         chatMessagesDiv.appendChild(systemDiv);
         scrollToBottom();
     }
-
     function logCallToChat(callType, action, otherUser) {
         let message = '';
         const icon = callType === 'video' ? 'video' : 'phone';
@@ -1911,7 +1943,6 @@
         }
         addSystemMessage(message, icon);
     }
-
     async function startCall(callType) {
         if (!currentRoom) {
             showOverlay("Please select a friend to call.");
@@ -1956,7 +1987,6 @@
             closeCall();
         }
     }
-
     async function answerCall() {
         if (!incomingCallData) return;
         try {
@@ -1996,7 +2026,6 @@
             rejectCall();
         }
     }
-
     function rejectCall() {
         if (!incomingCallData) return;
         socket.emit('reject_call', {
@@ -2007,7 +2036,6 @@
         logCallToChat(incomingCallData.type, 'missed', incomingCallData.caller);
         incomingCallData = null;
     }
-
     function closeCall() {
         const wasActive = isCallActive;
         const callType = currentCallType;
@@ -2045,7 +2073,6 @@
         currentCallType = null;
         incomingCallData = null;
     }
-
     async function createPeerConnection() {
         peerConnection = new RTCPeerConnection(configuration);
         localStream.getTracks().forEach(track => {
@@ -2074,7 +2101,6 @@
             }
         };
     }
-
     function toggleMuteAudio() {
         if (localStream) {
             const audioTrack = localStream.getAudioTracks()[0];
@@ -2086,7 +2112,6 @@
             }
         }
     }
-
     function toggleMuteVideo() {
         if (localStream) {
             const videoTrack = localStream.getVideoTracks()[0];
@@ -2098,7 +2123,6 @@
             }
         }
     }
-
     async function toggleShareScreen() {
         if (!isCallActive) {
             showOverlay('You must be in a call to share your screen');
@@ -2132,7 +2156,6 @@
             showOverlay('Failed to share screen. Please check permissions.');
         }
     }
-
     async function stopShareScreen() {
         if (screenStream) {
             screenStream.getTracks().forEach(track => track.stop());
@@ -2152,7 +2175,6 @@
         shareScreenBtn.classList.remove('active');
         shareScreenBtn.innerHTML = '<i class="fas fa-desktop"></i>';
     }
-
     function toggleMinimizeCall() {
         isCallMinimized = !isCallMinimized;
         callModal.classList.toggle('minimized');
@@ -2165,16 +2187,13 @@
             minimizeCallBtn.title = 'Minimize';
         }
     }
-
     function openDeviceSettings() {
         loadAvailableDevices();
         deviceSettingsModal.classList.add('active');
     }
-
     function closeDeviceSettings() {
         deviceSettingsModal.classList.remove('active');
     }
-
     async function saveDeviceSettings() {
         const selectedMic = microphoneSelect.value;
         const selectedCam = cameraSelect.value;
@@ -2191,7 +2210,6 @@
         }
         closeDeviceSettings();
     }
-
     audioCallBtn.addEventListener('click', () => startCall('audio'));
     videoCallBtn.addEventListener('click', () => startCall('video'));
     endCallBtn.addEventListener('click', closeCall);
@@ -2210,6 +2228,28 @@
         }
     });
 
+    // Helper function to show notification and play sound
+    function showNotificationAndPlaySound(title, body, dataRoom) {
+        // Check if page is not focused or hidden
+        if (!isPageFocused || !isPageVisible) {
+            if (Notification.permission === 'granted') {
+                const notification = new Notification(title, { body: body, tag: dataRoom });
+                // Play sound specifically for the notification
+                notificationSound.currentTime = 0;
+                notificationSound.play().catch(e => console.log("Audio play failed:", e));
+                notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                };
+            }
+        }
+
+        // Update page title if not focused
+        if (!isPageFocused) {
+            document.title = `(${document.title.match(/\((\d+)\)/)?.[1] || 0} + 1) Kryonix Chat`;
+        }
+    }
+
     // Socket.IO Events
     socket.on('connect', () => {
         console.log('Connected to Socket.IO');
@@ -2220,7 +2260,7 @@
             .map(li => li.dataset.friendUsername);
         if (friendUsernames.length > 0) {
             loadUserProfiles(friendUsernames);
-            loadContactsWithTimestamps();
+            loadContactsWithTimestamps(); // Load initial order and counts
         }
         const storedRoomType = localStorage.getItem('activeRoomType');
         if (storedRoomType === 'group') {
@@ -2238,53 +2278,73 @@
             }
         }
     });
-
     socket.on('message', (data) => {
         // Skip if this message ID already exists in the DOM (e.g., from edit or duplicate)
         if (chatMessagesDiv.querySelector(`[data-message-id="${data.id}"]`)) {
             return; // Already rendered — skip
         }
 
+        // Load profile if not already loaded
+        if (!userProfiles[data.username]) {
+            loadUserProfiles([data.username]);
+        }
+
         if (data.room === currentRoom) {
-            if (!userProfiles[data.username]) {
-                loadUserProfiles([data.username]);
-            }
+            // Add message to current chat
             addMessage(data);
             if (isAtBottom) {
                 scrollToBottom();
             }
-            loadContactsWithTimestamps();
+            // Do NOT play sound here for current chat messages
         } else {
+            // Message received in a different room - increment unread count
             if (data.username !== username) {
                 let contactLi;
+                let roomIdOrName;
                 if (data.room.startsWith('group_')) {
                     contactLi = friendListUl.querySelector(`li[data-room-id="${data.room}"]`);
+                    roomIdOrName = data.room;
                 } else {
                     const otherUser = data.room.replace(username + '-', '').replace('-' + username, '');
                     contactLi = friendListUl.querySelector(`li[data-friend-username="${otherUser}"]`);
+                    roomIdOrName = data.room;
                 }
                 if (contactLi) {
+                    // Move to top
+                    friendListUl.removeChild(contactLi);
+                    friendListUl.insertBefore(contactLi, friendListUl.firstChild);
+
+                    // Increment unread badge using localStorage
+                    let storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+                    const currentCount = storedUnreads[roomIdOrName] || 0;
+                    const newCount = currentCount + 1;
+                    storedUnreads[roomIdOrName] = newCount;
+                    localStorage.setItem('unreadCounts', JSON.stringify(storedUnreads));
+
+                    // Update the UI badge
                     let unreadBadge = contactLi.querySelector('.unread-indicator');
                     if (!unreadBadge) {
                         unreadBadge = document.createElement('span');
                         unreadBadge.classList.add('unread-indicator');
-                        unreadBadge.textContent = '1';
+                        unreadBadge.textContent = newCount.toString();
                         const mainSpan = contactLi.querySelector('span');
                         if (mainSpan) {
                             mainSpan.appendChild(unreadBadge);
                         }
                     } else {
-                        const count = parseInt(unreadBadge.textContent) + 1;
-                        unreadBadge.textContent = count;
+                        unreadBadge.textContent = newCount.toString();
                     }
-                    friendListUl.removeChild(contactLi);
-                    friendListUl.insertBefore(contactLi, friendListUl.firstChild);
+
+                    // Show notification and play sound ONLY when message is for a different room
+                    const sender = data.username;
+                    const chatName = contactLi.querySelector('span').textContent.replace(' GROUP', '');
+                    showNotificationAndPlaySound(sender, data.msg, data.room);
                 }
             }
         }
+        // Update chat order in real-time
         loadContactsWithTimestamps();
     });
-
     socket.on('message_updated', (data) => {
         if (data.room === currentRoom) {
             const newTextWithEditedTag = data.new_text.includes("<em>(edited)</em>")
@@ -2293,7 +2353,6 @@
             updateMessage(data.id, newTextWithEditedTag);
         }
     });
-
     socket.on('error', (data) => {
         console.error('Socket Error:', data.message);
         if (data.message.includes('not friends') || data.message.includes('blocked') || 
@@ -2311,12 +2370,10 @@
             showOverlay(data.message);
         }
     });
-
     socket.on('disconnect', () => {
         console.log('Disconnected from Socket.IO');
         showOverlay("Disconnected from chat server. Attempting to reconnect...");
     });
-
     socket.on('reconnect', (attemptNumber) => {
         console.log('Reconnected to Socket.IO');
         hideOverlay();
@@ -2326,21 +2383,19 @@
         socket.emit('user_connected');
         userStatus = 'online';
         socket.emit('request_statuses');
+        // Reload unread counts after reconnection
+        loadContactsWithTimestamps();
     });
-
     socket.on('reconnect_attempt', (attemptNumber) => {
         console.log(`Reconnection attempt ${attemptNumber}`);
     });
-
     socket.on('reconnect_error', (error) => {
         console.error('Reconnection error:', error);
     });
-
     socket.on('reconnect_failed', () => {
         console.error('Reconnection failed');
         showOverlay("Failed to reconnect to chat server. Please refresh the page.");
     });
-
     socket.on('user_status_update', (data) => {
         const statusIndicator = document.querySelector(`.status-indicator[data-username="${data.username}"]`);
         if (statusIndicator) {
@@ -2348,8 +2403,9 @@
             statusIndicator.classList.add(data.status);
         }
         connectedUsers[data.username] = data.status;
+        // Update chat order after status change (optional, can be removed if not needed frequently)
+        // loadContactsWithTimestamps();
     });
-
     socket.on('user_typing', (data) => {
         const typingIndicator = document.getElementById('typing-indicator');
         if (data.is_typing) {
@@ -2374,7 +2430,6 @@
             }
         }
     });
-
     socket.on('all_statuses', (data) => {
         Object.keys(data).forEach(username => {
             const statusIndicator = document.querySelector(`.status-indicator[data-username="${username}"]`);
@@ -2384,14 +2439,13 @@
             }
         });
     });
-
     socket.on('incoming_call', (data) => {
         incomingCallData = data;
         document.getElementById('caller-name').textContent = `${data.caller} is calling...`;
         document.getElementById('call-type-text').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
         incomingCallModal.classList.add('active');
+        showNotificationAndPlaySound('Incoming Call', `${data.caller} is calling you.`, data.room);
     });
-
     socket.on('call_answered', async (data) => {
         callStatus.textContent = 'Connecting...';
         await createPeerConnection();
@@ -2404,17 +2458,14 @@
         const otherUser = currentRoom.replace(username + '-', '').replace('-' + username, '');
         logCallToChat(currentCallType, 'started', otherUser);
     });
-
     socket.on('call_rejected', (data) => {
         showOverlay(`${data.rejecter} rejected your call.`);
         closeCall();
     });
-
     socket.on('call_ended', (data) => {
         showOverlay('Call ended.');
         closeCall();
     });
-
     socket.on('webrtc_offer', async (data) => {
         if (!peerConnection) {
             await createPeerConnection();
@@ -2427,11 +2478,9 @@
             answer: answer
         });
     });
-
     socket.on('webrtc_answer', async (data) => {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
     });
-
     socket.on('webrtc_ice_candidate', async (data) => {
         if (peerConnection && data.candidate) {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
@@ -2462,6 +2511,12 @@
     sendButton.addEventListener('touchstart', () => isAboutToSend = true);
     messageInput.addEventListener('focus', handleMobileFocus);
     messageInput.addEventListener('blur', handleMobileBlur);
+
+    // Request notification permission on load
+    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+    }
+
     navigator.mediaDevices.getUserMedia({ audio: true, video: true })
         .then(stream => {
             stream.getTracks().forEach(track => track.stop());
