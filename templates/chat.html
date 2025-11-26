@@ -936,14 +936,14 @@
         isPageVisible = !document.hidden;
         if (isPageVisible) {
             // Clear title when page becomes visible again
-            document.title = 'Kryonix Chat';
+            document.title = document.title.replace(/^\(New message\) /, '').replace(/^\(\d+\) /, '');
         }
     });
 
     window.addEventListener('focus', () => {
         isPageFocused = true;
-        // Clear title when window gains focus
-        document.title = 'Kryonix Chat';
+        // Clear title notification indicator when window gains focus
+        document.title = document.title.replace(/^\(New message\) /, '').replace(/^\(\d+\) /, '');
     });
 
     window.addEventListener('blur', () => {
@@ -2284,25 +2284,38 @@
         }
     });
 
-    // Helper function to show notification and play sound
+    // ===== CORRECTED NOTIFICATION FUNCTION =====
     function showNotificationAndPlaySound(title, body, dataRoom) {
-        // Check if page is not focused or hidden
-        if (!isPageFocused || !isPageVisible) {
+        // Always check if page is not visible or not focused
+        const shouldNotify = !isPageFocused || !isPageVisible;
+        
+        if (shouldNotify) {
+            // Show browser notification if permission granted
             if (Notification.permission === 'granted') {
-                const notification = new Notification(title, { body: body, tag: dataRoom });
-                // Play sound specifically for the notification
-                notificationSound.currentTime = 0;
-                notificationSound.play().catch(e => console.log("Audio play failed:", e));
+                const notification = new Notification(title, { 
+                    body: body, 
+                    tag: dataRoom,
+                    icon: '/static/favicon.ico', // Optional: add your icon path
+                    requireInteraction: false
+                });
+                
                 notification.onclick = () => {
                     window.focus();
                     notification.close();
                 };
             }
-        }
-
-        // Update page title if not focused
-        if (!isPageFocused) {
-            document.title = `(${document.title.match(/\((\d+)\)/)?.[1] || 0} + 1) Kryonix Chat`;
+            
+            // Play sound for unfocused notifications
+            if (notificationSound) {
+                notificationSound.currentTime = 0;
+                notificationSound.play().catch(e => console.log("Audio play failed:", e));
+            }
+            
+            // Update page title with unread indicator
+            const currentTitle = document.title;
+            if (!currentTitle.includes('New message')) {
+                document.title = `(New message) ${currentTitle.replace(/^\(\d+\) /, '')}`;
+            }
         }
     }
 
@@ -2335,14 +2348,26 @@
         }
     });
     socket.on('message', (data) => {
-        // Skip if this message ID already exists in the DOM (e.g., from edit or duplicate)
+        // Skip if this message ID already exists in the DOM
         if (chatMessagesDiv.querySelector(`[data-message-id="${data.id}"]`)) {
-            return; // Already rendered — skip
+            return;
         }
 
         // Load profile if not already loaded
         if (!userProfiles[data.username]) {
             loadUserProfiles([data.username]);
+        }
+
+        // Determine if message is from current user
+        const isOwnMessage = data.username === username;
+        
+        // Determine chat name for notification
+        let chatName = '';
+        if (data.room.startsWith('group_')) {
+            const groupLi = friendListUl.querySelector(`li[data-room-id="${data.room}"]`);
+            chatName = groupLi ? groupLi.dataset.roomName : 'Group Chat';
+        } else {
+            chatName = data.room.replace(username + '-', '').replace('-' + username, '');
         }
 
         if (data.room === currentRoom) {
@@ -2351,12 +2376,22 @@
             if (isAtBottom) {
                 scrollToBottom();
             }
-            // Do NOT play sound here for current chat messages
+            
+            // *** FIX: Show notification for CURRENT CHAT if window is unfocused ***
+            // Only if message is from another user
+            if (!isOwnMessage) {
+                showNotificationAndPlaySound(
+                    `${data.username} (${chatName})`,
+                    stripHtmlForPreview(data.msg),
+                    data.room
+                );
+            }
         } else {
             // Message received in a different room - increment unread count
-            if (data.username !== username) {
+            if (!isOwnMessage) {
                 let contactLi;
                 let roomIdOrName;
+                
                 if (data.room.startsWith('group_')) {
                     contactLi = friendListUl.querySelector(`li[data-room-id="${data.room}"]`);
                     roomIdOrName = data.room;
@@ -2365,47 +2400,50 @@
                     contactLi = friendListUl.querySelector(`li[data-friend-username="${otherUser}"]`);
                     roomIdOrName = data.room;
                 }
-                // Around line 1380-1420, inside the else block where messages from other rooms are handled
+
                 if (contactLi) {
-    // Move to top
-    friendListUl.removeChild(contactLi);
-    friendListUl.insertBefore(contactLi, friendListUl.firstChild);
+                    // Move to top
+                    friendListUl.removeChild(contactLi);
+                    friendListUl.insertBefore(contactLi, friendListUl.firstChild);
 
-    // Increment unread badge using localStorage
-    let storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
-    const currentCount = storedUnreads[roomIdOrName] || 0;
-    const newCount = currentCount + 1;
-    storedUnreads[roomIdOrName] = newCount;
-    localStorage.setItem('unreadCounts', JSON.stringify(storedUnreads));
+                    // Increment unread badge using localStorage
+                    let storedUnreads = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+                    const currentCount = storedUnreads[roomIdOrName] || 0;
+                    const newCount = currentCount + 1;
+                    storedUnreads[roomIdOrName] = newCount;
+                    localStorage.setItem('unreadCounts', JSON.stringify(storedUnreads));
 
-    // Update the UI badge
-    let unreadBadge = contactLi.querySelector('.unread-indicator');
-    if (!unreadBadge) {
-        unreadBadge = document.createElement('span');
-        unreadBadge.classList.add('unread-indicator');
-        unreadBadge.textContent = newCount.toString();
-        const mainSpan = contactLi.querySelector('span');
-        if (mainSpan) {
-            mainSpan.appendChild(unreadBadge);
-        }
-    } else {
-        unreadBadge.textContent = newCount.toString();
-    }
-    
-    // UPDATE LAST MESSAGE PREVIEW - ADD THESE LINES HERE
-    const lastMsgPreview = contactLi.querySelector('.last-message-preview');
-    if (lastMsgPreview) {
-        const cleanText = stripHtmlForPreview(data.msg);
-        lastMsgPreview.textContent = cleanText.substring(0, 40) + (cleanText.length > 40 ? '...' : '');
-    }
+                    // Update the UI badge
+                    let unreadBadge = contactLi.querySelector('.unread-indicator');
+                    if (!unreadBadge) {
+                        unreadBadge = document.createElement('span');
+                        unreadBadge.classList.add('unread-indicator');
+                        unreadBadge.textContent = newCount.toString();
+                        const mainSpan = contactLi.querySelector('span');
+                        if (mainSpan) {
+                            mainSpan.appendChild(unreadBadge);
+                        }
+                    } else {
+                        unreadBadge.textContent = newCount.toString();
+                    }
+                    
+                    // Update last message preview
+                    const lastMsgPreview = contactLi.querySelector('.last-message-preview');
+                    if (lastMsgPreview) {
+                        const cleanText = stripHtmlForPreview(data.msg);
+                        lastMsgPreview.textContent = cleanText.substring(0, 40) + (cleanText.length > 40 ? '...' : '');
+                    }
 
-    // Show notification and play sound ONLY when message is for a different room
-    const sender = data.username;
-    const chatName = contactLi.querySelector('span').textContent.replace(' GROUP', '');
-    showNotificationAndPlaySound(sender, data.msg, data.room);
-}
+                    // Show notification for other room messages
+                    showNotificationAndPlaySound(
+                        `${data.username} (${chatName})`,
+                        stripHtmlForPreview(data.msg),
+                        data.room
+                    );
+                }
             }
         }
+        
         // Update chat order in real-time
         loadContactsWithTimestamps();
     });
