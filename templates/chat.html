@@ -805,12 +805,30 @@
     // Decrypt message
     function decryptMessage(encryptedMsg, roomName) {
         try {
+            // Check if message looks like it's encrypted (CryptoJS encrypted strings start with "U2")
+            // or if it's clearly plain text (too short or contains common words)
+            if (!encryptedMsg || encryptedMsg.length < 20 || 
+                !encryptedMsg.includes('U2FsdGVk') || // "Salted__" in base64
+                encryptedMsg.startsWith('<') || 
+                /^[a-zA-Z0-9\s,.!?'"()-]+$/.test(encryptedMsg.substring(0, 50))) {
+                // Likely not encrypted, return as-is
+                return encryptedMsg;
+            }
+            
             const key = getEncryptionKey(roomName);
             const decrypted = CryptoJS.AES.decrypt(encryptedMsg, key);
-            return decrypted.toString(CryptoJS.enc.Utf8);
+            const result = decrypted.toString(CryptoJS.enc.Utf8);
+            
+            // If decryption results in empty string, it failed - return original
+            if (!result || result.length === 0) {
+                return encryptedMsg;
+            }
+            
+            return result;
         } catch (e) {
             console.error('Decryption failed:', e);
-            return '[Encrypted message - key not available]';
+            // Return original message if decryption fails (likely not encrypted)
+            return encryptedMsg;
         }
     }
 
