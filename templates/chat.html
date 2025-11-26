@@ -760,6 +760,7 @@
     </div>
 </div>
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script>
     const socket = io();
     const username = "{{ username }}";
@@ -1712,11 +1713,15 @@
                     item.querySelector('span').appendChild(unreadBadge);
                 }
                 
-                // UPDATE LAST MESSAGE PREVIEW - ADD THIS SECTION
+                // UPDATE LAST MESSAGE PREVIEW - DECRYPT BEFORE SHOWING
                 const lastMsgPreview = item.querySelector('.last-message-preview');
                 if (lastMsgPreview && contactData) {
                     const msgText = contactData.last_message_text || '';
-                    const cleanText = stripHtmlForPreview(msgText);
+                    // Decrypt the message before showing preview
+                    const decryptedText = msgText.includes('<') && msgText.includes('>')
+                        ? msgText  // Don't decrypt HTML (images/videos)
+                        : decryptMessage(msgText, itemId);
+                    const cleanText = stripHtmlForPreview(decryptedText);
                     lastMsgPreview.textContent = cleanText.substring(0, 40) + (cleanText.length > 40 ? '...' : '');
                 }
                 
@@ -2475,10 +2480,13 @@
                         unreadBadge.textContent = newCount.toString();
                     }
                     
-                    // Update last message preview
+                    // Update last message preview - DECRYPT FIRST
                     const lastMsgPreview = contactLi.querySelector('.last-message-preview');
                     if (lastMsgPreview) {
-                        const cleanText = stripHtmlForPreview(data.msg);
+                        const decryptedPreview = data.msg.includes('<') && data.msg.includes('>')
+                            ? data.msg
+                            : decryptMessage(data.msg, roomIdOrName);
+                        const cleanText = stripHtmlForPreview(decryptedPreview);
                         lastMsgPreview.textContent = cleanText.substring(0, 40) + (cleanText.length > 40 ? '...' : '');
                     }
 
