@@ -776,6 +776,43 @@
     let isLoadingMore = false;
     let pendingMediaFile = null;
     let userProfiles = {};
+    let encryptionKeys = {}; // Store room encryption keys
+
+    // Function to get or create encryption key for a room
+    function getEncryptionKey(roomName) {
+        if (!encryptionKeys[roomName]) {
+            // Try to load from localStorage
+            const stored = localStorage.getItem(`key_${roomName}`);
+            if (stored) {
+                encryptionKeys[roomName] = stored;
+            } else {
+                // Generate new key (in production, exchange keys properly)
+                const newKey = CryptoJS.lib.WordArray.random(256/8).toString();
+                encryptionKeys[roomName] = newKey;
+                localStorage.setItem(`key_${roomName}`, newKey);
+            }
+        }
+        return encryptionKeys[roomName];
+    }
+
+    // Encrypt message
+    function encryptMessage(message, roomName) {
+        const key = getEncryptionKey(roomName);
+        return CryptoJS.AES.encrypt(message, key).toString();
+    }
+
+    // Decrypt message
+    function decryptMessage(encryptedMsg, roomName) {
+        try {
+            const key = getEncryptionKey(roomName);
+            const decrypted = CryptoJS.AES.decrypt(encryptedMsg, key);
+            return decrypted.toString(CryptoJS.enc.Utf8);
+        } catch (e) {
+            console.error('Decryption failed:', e);
+            return '[Encrypted message - key not available]';
+        }
+    }
+
     let currentGroupInfo = null;
     let userScrolledUp = false;
     let isAtBottom = true;
@@ -1434,7 +1471,11 @@
             contentDiv.appendChild(replyContext);
         }
         const textSpan = document.createElement('span');
-        textSpan.innerHTML = msg.msg;
+        // DECRYPT BEFORE DISPLAYING
+        const decryptedMsg = msg.msg.includes('<') && msg.msg.includes('>') 
+            ? msg.msg  // Don't decrypt HTML (images/videos/system messages)
+            : decryptMessage(msg.msg, currentRoom);
+        textSpan.innerHTML = decryptedMsg;
         const timeSpan = document.createElement('div');
         timeSpan.classList.add('message-time');
         timeSpan.textContent = msg.time;
@@ -1491,7 +1532,10 @@
             msg: messageText
         };
         replyUsername.textContent = messageUsername;
-        replyText.textContent = stripHtmlForPreview(messageText);
+        const decryptedReplyText = messageText.includes('<') && messageText.includes('>')
+            ? messageText
+            : decryptMessage(messageText, currentRoom);
+        replyText.textContent = stripHtmlForPreview(decryptedReplyText);
         replyPreview.style.display = 'flex';
         messageInput.focus();
     }
@@ -1694,10 +1738,14 @@
                 showOverlay(`Message too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
                 return;
             }
+            
+            // ENCRYPT THE MESSAGE
+            const encryptedText = encryptMessage(messageText, currentRoom);
+            
             const messageData = {
                 username: username,
                 room: currentRoom,
-                msg: messageText
+                msg: encryptedText  // ← NOW ENCRYPTED
             };
             if (replyingTo) {
                 messageData.reply_to = replyingTo;
