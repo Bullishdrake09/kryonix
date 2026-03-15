@@ -1,38 +1,55 @@
 {% extends "base.html" %}
-{% block title %}Kryonix Chat - {{ username }}{% endblock %}
-{% block content %}
+{% block title %}Kryonix Chat — {{ username }}{% endblock %}
+
+{% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+{% endblock %}
 
-<!-- Hidden audio element for notifications -->
-<audio id="notification-sound" src="static/message.mp3" preload="auto"></audio>
+{% block content %}
+<!-- Notification sound -->
+<audio id="notification-sound" src="{{ url_for('static', filename='message.mp3') }}" preload="auto"></audio>
 
+<!-- Mobile header -->
 <div class="mobile-header" id="mobile-header">
-    <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
+    <button class="menu-toggle" id="menu-toggle" aria-label="Open sidebar">
+        <i class="fas fa-bars"></i>
+    </button>
     <h2 id="mobile-chat-title">Kryonix Chat</h2>
-    <span style="visibility: hidden;"><i class="fas fa-bars"></i></span>
+    {# FIX: Replaced invisible spacer with aria-hidden so screen readers ignore it #}
+    <span aria-hidden="true" style="width:1.5rem;"></span>
 </div>
 
 <div class="app-container">
+    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <button class="close-button" id="close-sidebar-button"><i class="fas fa-times"></i></button>
+        <button class="close-button" id="close-sidebar-button" aria-label="Close sidebar">
+            <i class="fas fa-times"></i>
+        </button>
+
         <div class="user-info">
             <div class="avatar">
                 {% if current_user.profile_picture %}
-                <img src="{{ current_user.profile_picture }}" alt="{{ current_user.username }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                <img src="{{ current_user.profile_picture }}"
+                     alt="{{ current_user.username }}"
+                     style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
                 {% else %}
                 {{ current_user.username[0].upper() }}
                 {% endif %}
             </div>
             <div class="username">{{ username }}</div>
         </div>
-        
-        <!-- Search Bar -->
+
+        <!-- Contact search -->
         <div class="search-container">
-            <input type="text" class="search-input" id="contact-search" placeholder="Search contacts...">
+            <input type="text"
+                   class="search-input"
+                   id="contact-search"
+                   placeholder="Search contacts…"
+                   autocomplete="off">
         </div>
-        
-        <nav>
+
+        <nav aria-label="Main navigation">
             <a href="{{ url_for('chat') }}">Chats</a>
             <a href="{{ url_for('friends') }}">Friends</a>
             <a href="{{ url_for('settings') }}">Settings</a>
@@ -40,64 +57,78 @@
             <a href="{{ url_for('admin_page') }}">Admin Panel</a>
             {% endif %}
         </nav>
-        
+
         <button class="create-group-btn" id="create-group-btn">
             <i class="fas fa-users"></i> Create Group
         </button>
-        
+
         <div class="friends-list">
             <h3>Chats</h3>
             <ul id="friend-list-ul">
                 {% if not friends_list and not group_chats %}
                 <p class="initial-chat-message">Add friends to start chatting</p>
                 {% endif %}
+
                 {% for group in group_chats %}
-                <li data-room-id="{{ group.id }}" data-room-type="group" data-room-name="{{ group.name }}">
+                <li data-room-id="{{ group.id }}"
+                    data-room-type="group"
+                    data-room-name="{{ group.name }}">
                     <div class="contact-info">
                         <div class="friend-avatar" style="background: var(--primary);">
                             <i class="fas fa-users"></i>
                         </div>
                         <div class="contact-details">
                             <div class="contact-name">
-                                <span>{{ group.name }} <span class="group-indicator">GROUP</span></span>
+                                <span>{{ group.name }}
+                                    <span class="group-indicator">GROUP</span>
+                                </span>
                             </div>
-                            <div class="last-message-preview" data-contact-id="{{ group.id }}"></div>
+                            <div class="last-message-preview"
+                                 data-contact-id="{{ group.id }}"></div>
                         </div>
                     </div>
                 </li>
                 {% endfor %}
+
                 {% for friend in friends_list %}
                 <li data-friend-username="{{ friend }}" data-room-type="direct">
                     <div class="contact-info">
                         <div class="friend-avatar">
                             <span id="avatar-{{ friend }}">{{ friend[0].upper() }}</span>
-                            <span class="status-indicator online" data-username="{{ friend }}"></span>
+                            <span class="status-indicator offline"
+                                  data-username="{{ friend }}"></span>
                         </div>
                         <div class="contact-details">
                             <div class="contact-name">
                                 <span>{{ friend }}</span>
                             </div>
-                            <div class="last-message-preview" data-contact-id="{{ friend }}"></div>
+                            <div class="last-message-preview"
+                                 data-contact-id="{{ friend }}"></div>
                         </div>
                     </div>
                 </li>
                 {% endfor %}
             </ul>
         </div>
-        
+
         <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
-    </div>
-    
+    </div><!-- /sidebar -->
+
+    <!-- Main chat area -->
     <div class="chat-area">
+
+        <!-- Status overlay (errors / info) -->
         <div id="status-overlay">
             <p id="overlay-message"></p>
             <button onclick="hideOverlay()">OK</button>
         </div>
-        
+
+        <!-- Chat header -->
         <div class="chat-header">
             <h2 id="current-chat-header"></h2>
             <div class="header-links">
-                <div class="call-icons" id="call-icons" style="display: none;">
+                {# FIX: Both icon groups start hidden; chat-main.js reveals the right one #}
+                <div class="call-icons" id="call-icons" style="display:none;">
                     <button class="call-icon-btn" id="audio-call-btn" title="Audio Call">
                         <i class="fas fa-phone"></i>
                     </button>
@@ -105,7 +136,7 @@
                         <i class="fas fa-video"></i>
                     </button>
                 </div>
-                <div class="call-icons" id="group-call-icons" style="display: none;">
+                <div class="call-icons" id="group-call-icons" style="display:none;">
                     <button class="call-icon-btn" id="group-audio-call-btn" title="Group Audio Call">
                         <i class="fas fa-phone"></i>
                     </button>
@@ -113,48 +144,61 @@
                         <i class="fas fa-video"></i>
                     </button>
                 </div>
-                <a id="edit-group-btn" style="display: none;">Edit Group</a>
+                <a id="edit-group-btn" style="display:none;cursor:pointer;">Edit Group</a>
             </div>
         </div>
-        
-        <!-- Reply Preview Bar -->
-        <div class="reply-preview" id="reply-preview" style="display: none;">
+
+        {# FIX: Reply preview sits between header and messages, NOT inside messages div #}
+        <div class="reply-preview" id="reply-preview" style="display:none;">
             <div class="reply-preview-content">
                 <div class="reply-preview-username" id="reply-username"></div>
-                <div class="reply-preview-text" id="reply-text"></div>
+                <div class="reply-preview-text"    id="reply-text"></div>
             </div>
-            <button class="reply-preview-close" id="cancel-reply">
+            <button class="reply-preview-close" id="cancel-reply" aria-label="Cancel reply">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        
+
+        <!-- Messages -->
         <div class="chat-messages" id="chat-messages">
             {% if not friends_list and not group_chats %}
             <p class="initial-chat-message">Add friends to start chatting!</p>
             {% else %}
-            <p class="initial-chat-message" id="select-chat-prompt">Select a friend or group from the sidebar to start chatting.</p>
+            <p class="initial-chat-message" id="select-chat-prompt">
+                Select a friend or group from the sidebar to start chatting.
+            </p>
             {% endif %}
         </div>
-        
+
+        <!-- Character counter -->
         <div class="char-counter" id="char-counter">0 / {{ max_message_length }}</div>
-        
+
+        <!-- Input bar -->
         <div class="chat-input-area">
-            <input type="text" id="message-input" placeholder="Type a message..." maxlength="{{ max_message_length }}">
-            <label for="file-input">
+            <input type="text"
+                   id="message-input"
+                   placeholder="Type a message…"
+                   maxlength="{{ max_message_length }}"
+                   autocomplete="off">
+            <label for="file-input" title="Attach file">
                 <i class="fas fa-paperclip"></i>
             </label>
             <input type="file" id="file-input" accept="image/*,video/*">
-            <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+            <button id="send-button" aria-label="Send message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </div>
-    </div>
-</div>
+    </div><!-- /chat-area -->
+</div><!-- /app-container -->
 
-<!-- Media Preview Modal -->
-<div class="media-preview-modal" id="media-preview-modal">
+<!-- ── Modals ──────────────────────────────────────────────────────────── -->
+
+<!-- Media preview -->
+<div class="media-preview-modal" id="media-preview-modal" role="dialog" aria-modal="true">
     <div class="media-preview-content">
         <div id="media-preview-container"></div>
         <div class="media-preview-actions">
-            <button class="send-media-btn" id="send-media-btn">
+            <button class="send-media-btn"   id="send-media-btn">
                 <i class="fas fa-paper-plane"></i> Send
             </button>
             <button class="cancel-media-btn" id="cancel-media-btn">
@@ -164,14 +208,15 @@
     </div>
 </div>
 
-<!-- Create/Edit Group Modal -->
-<div class="group-modal" id="group-modal">
+<!-- Create / Edit Group -->
+<div class="group-modal" id="group-modal" role="dialog" aria-modal="true">
     <div class="group-modal-content">
         <h3 id="group-modal-title"><i class="fas fa-users"></i> Create New Group</h3>
-        
-        <!-- Create Group Form -->
+
+        <!-- Create form -->
         <div class="group-form" id="create-group-form">
-            <input type="text" id="group-name-input" placeholder="Group Name" maxlength="50">
+            <input type="text" id="group-name-input"
+                   placeholder="Group Name" maxlength="50">
             <div class="member-selection" id="member-selection">
                 {% for friend in friends_list %}
                 <div class="member-checkbox">
@@ -182,42 +227,45 @@
             </div>
             <div class="group-actions">
                 <button class="create-group-submit" id="create-group-submit">Create</button>
-                <button class="cancel-group-btn" id="cancel-group-btn">Cancel</button>
+                <button class="cancel-group-btn"    id="cancel-group-btn">Cancel</button>
             </div>
         </div>
-        
-        <!-- Edit Group Form -->
-        <div class="group-form" id="edit-group-form" style="display: none;">
-            <input type="text" id="edit-group-name-input" placeholder="Group Name" maxlength="50">
+
+        <!-- Edit form -->
+        <div class="group-form" id="edit-group-form" style="display:none;">
+            <input type="text" id="edit-group-name-input"
+                   placeholder="Group Name" maxlength="50">
             <div class="group-members-list" id="group-members-list"></div>
-            
-            <!-- Add Members Section -->
-            <div class="add-members-section" id="add-members-section" style="display: none;">
+
+            <div class="add-members-section" id="add-members-section" style="display:none;">
                 <h4>Add Members</h4>
                 <div class="member-selection" id="add-member-selection"></div>
-                <button class="add-member-btn" id="confirm-add-members">Add Selected Members</button>
+                <button class="add-member-btn" id="confirm-add-members">
+                    Add Selected Members
+                </button>
             </div>
-            
+
             <div class="group-actions">
                 <button class="create-group-submit" id="save-group-btn">Save Changes</button>
-                <button class="add-member-btn" id="show-add-members-btn" style="display: none;">
+                <button class="add-member-btn"      id="show-add-members-btn"
+                        style="display:none;">
                     <i class="fas fa-user-plus"></i> Add Members
                 </button>
-                <button class="leave-group-btn" id="leave-group-btn">Leave Group</button>
-                <button class="cancel-group-btn" id="cancel-edit-group-btn">Cancel</button>
+                <button class="leave-group-btn"     id="leave-group-btn">Leave Group</button>
+                <button class="cancel-group-btn"    id="cancel-edit-group-btn">Cancel</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Video Call Modal -->
-<div class="call-modal" id="call-modal">
+<!-- Video call -->
+<div class="call-modal" id="call-modal" role="dialog" aria-modal="true">
     <div class="call-content">
         <div class="call-header">
             <h3 id="call-title">Video Call</h3>
-            <span id="call-status" style="color: var(--gray);">Connecting...</span>
+            <span id="call-status" style="color:var(--gray);">Connecting…</span>
         </div>
-        <button class="settings-call-btn" id="settings-call-btn" title="Settings">
+        <button class="settings-call-btn" id="settings-call-btn" title="Device settings">
             <i class="fas fa-cog"></i>
         </button>
         <button class="minimize-call-btn" id="minimize-call-btn" title="Minimize">
@@ -225,50 +273,46 @@
         </button>
         <div class="video-container">
             <video id="remote-video" autoplay playsinline></video>
-            <video id="local-video" autoplay playsinline muted></video>
+            <video id="local-video"  autoplay playsinline muted></video>
         </div>
         <div class="call-controls">
-            <button class="call-button mute" id="mute-audio-btn" title="Mute Audio">
+            <button class="call-button mute" id="mute-audio-btn"   title="Mute audio">
                 <i class="fas fa-microphone"></i>
             </button>
-            <button class="call-button mute" id="mute-video-btn" title="Turn Off Video">
+            <button class="call-button mute" id="mute-video-btn"   title="Turn off video">
                 <i class="fas fa-video"></i>
             </button>
-            <button class="call-button share" id="share-screen-btn" title="Share Screen">
+            <button class="call-button share" id="share-screen-btn" title="Share screen">
                 <i class="fas fa-desktop"></i>
             </button>
-            <button class="call-button end" id="end-call-btn" title="End Call">
+            <button class="call-button end"  id="end-call-btn"     title="End call">
                 <i class="fas fa-phone-slash"></i>
             </button>
         </div>
     </div>
 </div>
 
-<!-- Device Settings Modal -->
-<div class="device-settings-modal" id="device-settings-modal">
+<!-- Device settings -->
+<div class="device-settings-modal" id="device-settings-modal" role="dialog" aria-modal="true">
     <h3><i class="fas fa-cog"></i> Device Settings</h3>
     <div class="device-setting">
         <label for="microphone-select">Microphone</label>
-        <select id="microphone-select">
-            <option value="">Loading...</option>
-        </select>
+        <select id="microphone-select"><option value="">Loading…</option></select>
     </div>
     <div class="device-setting">
         <label for="camera-select">Camera</label>
-        <select id="camera-select">
-            <option value="">Loading...</option>
-        </select>
+        <select id="camera-select"><option value="">Loading…</option></select>
     </div>
     <div class="device-settings-actions">
-        <button class="save-settings-btn" id="save-settings-btn">Apply</button>
+        <button class="save-settings-btn"   id="save-settings-btn">Apply</button>
         <button class="cancel-settings-btn" id="cancel-settings-btn">Cancel</button>
     </div>
 </div>
 
-<!-- Incoming Call Modal -->
-<div class="incoming-call-modal" id="incoming-call-modal">
-    <h3><i class="fas fa-phone" style="color: var(--primary);"></i> Incoming Call</h3>
-    <p id="caller-name">Someone is calling you...</p>
+<!-- Incoming 1-to-1 call -->
+<div class="incoming-call-modal" id="incoming-call-modal" role="dialog" aria-modal="true">
+    <h3><i class="fas fa-phone" style="color:var(--primary);"></i> Incoming Call</h3>
+    <p id="caller-name">Someone is calling you…</p>
     <p id="call-type-text">Video Call</p>
     <div class="incoming-call-actions">
         <button class="answer-button" id="answer-call-btn">
@@ -280,45 +324,44 @@
     </div>
 </div>
 
-<!-- Group Call Modal -->
-<div class="call-modal" id="group-call-modal">
+<!-- Group call -->
+<div class="call-modal" id="group-call-modal" role="dialog" aria-modal="true">
     <div class="call-content group-call-content">
         <div class="call-header">
             <h3 id="group-call-title"><i class="fas fa-users"></i> Group Call</h3>
-            <span id="group-call-status" style="color: var(--gray);">Connecting...</span>
+            <span id="group-call-status" style="color:var(--gray);">Connecting…</span>
         </div>
         <button class="minimize-call-btn" id="minimize-group-call-btn" title="Minimize">
             <i class="fas fa-minus"></i>
         </button>
         <div class="group-video-grid" id="group-video-grid">
-            <!-- Local video tile -->
             <div class="group-video-tile" id="local-group-tile">
                 <video id="local-group-video" autoplay playsinline muted></video>
                 <div class="video-tile-label" id="local-group-label">You</div>
             </div>
         </div>
         <div class="call-controls">
-            <button class="call-button mute" id="group-mute-audio-btn" title="Mute Audio">
+            <button class="call-button mute"  id="group-mute-audio-btn"  title="Mute audio">
                 <i class="fas fa-microphone"></i>
             </button>
-            <button class="call-button mute" id="group-mute-video-btn" title="Turn Off Video">
+            <button class="call-button mute"  id="group-mute-video-btn"  title="Turn off video">
                 <i class="fas fa-video"></i>
             </button>
-            <button class="call-button share" id="group-share-screen-btn" title="Share Screen">
+            <button class="call-button share" id="group-share-screen-btn" title="Share screen">
                 <i class="fas fa-desktop"></i>
             </button>
-            <button class="call-button end" id="group-end-call-btn" title="Leave Call">
+            <button class="call-button end"   id="group-end-call-btn"    title="Leave call">
                 <i class="fas fa-phone-slash"></i>
             </button>
         </div>
     </div>
 </div>
 
-<!-- Incoming Group Call Modal -->
-<div class="incoming-call-modal" id="incoming-group-call-modal">
-    <h3><i class="fas fa-users" style="color: var(--primary);"></i> Incoming Group Call</h3>
-    <p id="group-call-group-name" style="font-weight:700; color: var(--primary);"></p>
-    <p id="group-caller-name">Someone started a call...</p>
+<!-- Incoming group call -->
+<div class="incoming-call-modal" id="incoming-group-call-modal" role="dialog" aria-modal="true">
+    <h3><i class="fas fa-users" style="color:var(--primary);"></i> Incoming Group Call</h3>
+    <p id="group-call-group-name" style="font-weight:700;color:var(--primary);"></p>
+    <p id="group-caller-name">Someone started a call…</p>
     <p id="group-call-type-text">Video Call</p>
     <div class="incoming-call-actions">
         <button class="answer-button" id="answer-group-call-btn">
@@ -329,8 +372,16 @@
         </button>
     </div>
 </div>
+{% endblock %}
 
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+{% block scripts %}
+{# FIX: Use the versioned Socket.IO CDN already loaded in base.html;
+        removed duplicate socket.io script that was here previously. #}
+<script>
+    // Expose the username to JS modules before any module script runs
+    window.username = {{ username | tojson }};
+</script>
+{# FIX: Load chat-webrtc BEFORE chat-group-webrtc so its globals are available #}
 <script src="{{ url_for('static', filename='js/chat-main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chat-webrtc.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chat-group-webrtc.js') }}"></script>

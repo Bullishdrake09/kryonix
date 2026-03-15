@@ -358,16 +358,15 @@ nav a:hover, nav a:focus {
     background: var(--message-bg);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
-    /* Add these properties to ensure proper scrolling */
-    min-height: 0; /* This is crucial for flex children to scroll properly */
-    max-height: calc(100vh - var(--header-height) - var(--input-height) - 20px);
+    /* FIX: min-height:0 is crucial for flex children to scroll properly.
+       Removed the hard max-height that was overriding flex layout on desktop. */
+    min-height: 0;
 }
 
-/* Add this to handle mobile viewport issues */
+/* FIX: On mobile use dvh so the keyboard doesn't push messages off-screen */
 @media (max-width: 768px) {
     .chat-messages {
-        max-height: calc(100vh - var(--header-height) - var(--input-height) - 32px);
-        /* Ensure it doesn't go under mobile keyboard */
+        max-height: calc(100dvh - var(--header-height) - var(--input-height) - 56px);
         height: auto;
     }
 }
@@ -912,7 +911,8 @@ nav a:hover, nav a:focus {
     
     .mobile-panel {
         border-radius: 0;
-        height: 100vh;
+        /* FIX: use dvh so the panel never overflows behind the mobile browser chrome */
+        height: 100dvh;
         display: flex;
         flex-direction: column;
     }
@@ -1278,13 +1278,11 @@ body.auth-page {
     30% { opacity: 1; }
 }
 
-    @media (max-width: 768px) {
-        .mobile-header {
-            display: flex !important;
-        }
-    }
-    
-    /* Video Call Modal Styles */
+/* FIX: Removed stray indented @media rule whose !important accidentally
+   overrode the responsive sidebar. The equivalent rule already exists
+   correctly at line ~856 above. */
+
+/* Video Call Modal Styles */
     .call-modal {
         display: none;
         position: fixed;
@@ -1294,10 +1292,13 @@ body.auth-page {
         height: 100%;
         background: rgba(0, 0, 0, 0.95);
         z-index: 1000;
+        /* FIX: justify-content/align-items must be on the element so they
+           work when display is set to flex via JS (style.display='flex') */
         justify-content: center;
         align-items: center;
     }
     
+    /* active class kept for backward compatibility; JS now uses style.display */
     .call-modal.active {
         display: flex;
     }

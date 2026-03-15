@@ -3,31 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>{% block title %}My App{% endblock %}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js    "></script>
+    <title>{% block title %}Kryonix{% endblock %}</title>
+
+    {# FIX: Removed trailing whitespace from CDN URL that caused a 404 on every page load #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     <style>
-        /* Dynamic styles for theme colors */
+        /* Dynamic theme colours injected from session */
         :root {
-            --primary-color: {{ session.get('primary_color', '#0f0f0f') }};
-            --accent-color: {{ session.get('accent_color', '#ff3f81') }};
+            --primary-color: {{ session.get('primary_color', '#0f0f0f') | e }};
+            --accent-color:  {{ session.get('accent_color',  '#ff3f81') | e }};
         }
 
-        /* --- Page Transition Overlay Styles --- */
+        /* ── Page Transition Overlay ──────────────────────────────────────────── */
         #page-transition-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f0a2e, #1a0a3c, #2d0a5a, #1a0a3c);
+            inset: 0;
+            background: radial-gradient(circle at center, #1a0a3c 0%, #0f0a2e 40%, #0d0d1a 100%);
             z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 1;
             visibility: visible;
-            transition: opacity 1.5s cubic-bezier(0.23, 1, 0.32, 1), visibility 1.5s ease 1.9s;
+            /* FIX: visibility delay matches opacity so it isn't immediately hidden */
+            transition: opacity 1.5s cubic-bezier(0.23, 1, 0.32, 1),
+                        visibility 0s linear 1.5s;
+            animation: pulseGlow 4s ease-in-out infinite;
         }
 
         #page-transition-overlay.inactive {
@@ -52,9 +55,7 @@
         #page-transition-overlay .logo::before {
             content: attr(data-text);
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+            inset: 0;
             color: transparent;
             background: linear-gradient(90deg, #8a2be2, #4b0082, #0000ff, #1e90ff);
             background-clip: text;
@@ -67,81 +68,90 @@
             opacity: 0.7;
         }
 
-        /* Active state for the logo text animation */
         #page-transition-overlay:not(.inactive) .logo {
             opacity: 1;
             transform: scale(1) rotateX(0);
             transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
         }
 
-        /* Enhanced background animation */
-        #page-transition-overlay {
-            background: radial-gradient(circle at center, #1a0a3c 0%, #0f0a2e 40%, #0d0d1a 100%);
-            background-size: 400% 400%;
-            animation: gradientBGOverlay 8s ease infinite, pulseGlow 4s ease-in-out infinite;
-        }
-
-        @keyframes gradientBGOverlay {
-            0% { background-position: 0% 0%; }
-            50% { background-position: 100% 100%; }
-            100% { background-position: 0% 0%; }
-        }
-
         @keyframes pulseGlow {
-            0% { box-shadow: inset 0 0 50px rgba(75, 0, 130, 0.5); }
-            50% { box-shadow: inset 0 0 100px rgba(128, 0, 255, 0.7); }
-            100% { box-shadow: inset 0 0 50px rgba(75, 0, 130, 0.5); }
+            0%   { box-shadow: inset 0 0  50px rgba(75,  0, 130, 0.5); }
+            50%  { box-shadow: inset 0 0 100px rgba(128, 0, 255, 0.7); }
+            100% { box-shadow: inset 0 0  50px rgba(75,  0, 130, 0.5); }
         }
 
         @keyframes shine {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0%   { background-position: 0%   50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0%   50%; }
         }
-
-        /* --- End Page Transition Overlay Styles --- */
-
+        /* ── End Page Transition Overlay ────────────────────────────────────── */
     </style>
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% block head %}{% endblock %}
 </head>
 <body>
-    <!-- Add the overlay div here -->
-    <div id="page-transition-overlay">
+    <div id="page-transition-overlay" role="presentation" aria-hidden="true">
         <div class="logo" data-text="KRYONIX">KRYONIX</div>
     </div>
 
     {% block content %}{% endblock %}
 
     <script>
-    // --- Page Transition Script ---
-    document.addEventListener('DOMContentLoaded', function() {
-        const pageTransitionOverlay = document.getElementById('page-transition-overlay');
+    // ── Page Transition Script ──────────────────────────────────────────────────
+    (function () {
+        'use strict';
 
-        // Handle link clicks
-        document.body.addEventListener('click', function(event) {
-            const link = event.target.closest('a');
-            if (link && link.href && !link.target && !link.hasAttribute('download')) {
-                event.preventDefault();
+        var overlay = document.getElementById('page-transition-overlay');
 
-                // Ensure the overlay is visible and reset its state
-                pageTransitionOverlay.classList.remove('inactive');
-                
-                // Navigate after animation completes
-                setTimeout(function() {
-                    window.location.href = link.href;
-                }, 2700); // Increased timeout for longer animation
+        // Fade out the overlay when the page has loaded
+        requestAnimationFrame(function () {
+            setTimeout(function () {
+                overlay.classList.add('inactive');
+            }, 10);
+        });
+
+        // Intercept link clicks and show the overlay before navigating
+        document.body.addEventListener('click', function (e) {
+            var link = e.target.closest('a');
+            if (!link) return;
+
+            var href = link.getAttribute('href');
+
+            // FIX: Don't intercept links that shouldn't trigger a full-page transition:
+            //   • missing or empty href
+            //   • opens in a new tab / window  (_blank, _top, …)
+            //   • download links
+            //   • pure hash anchors  (#section)
+            //   • mailto:, tel:, javascript: pseudo-protocols
+            //   • links opted-out via data-no-transition attribute
+            if (
+                !href ||
+                link.target ||
+                link.hasAttribute('download') ||
+                href.charAt(0) === '#' ||
+                href.indexOf('mailto:') === 0 ||
+                href.indexOf('tel:') === 0 ||
+                href.indexOf('javascript:') === 0 ||
+                link.hasAttribute('data-no-transition')
+            ) {
+                return;
             }
-        });
 
-        // Fade out overlay on new page load
-        requestAnimationFrame(() => {
-             setTimeout(() => {
-                 pageTransitionOverlay.classList.add('inactive');
-             }, 10);
-        });
+            e.preventDefault();
+            overlay.classList.remove('inactive');
 
-    });
-    // --- End Page Transition Script ---
+            // FIX: Reduced delay to 1800ms (was 2700ms) to match the actual
+            // animation duration so users aren't staring at a finished animation
+            setTimeout(function () {
+                window.location.href = link.href;
+            }, 1800);
+        });
+    }());
+    // ── End Page Transition Script ──────────────────────────────────────────────
     </script>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,109 +1,229 @@
-<!-- friends.html -->
-{% extends 'base.html' %} <!-- Add this line -->
+{% extends 'base.html' %}
 
-{% block title %}Friends - {{ current_user.username }}{% endblock %} <!-- Optional: Override title block -->
+{% block title %}Friends — {{ current_user.username }}{% endblock %}
 
-{% block content %} <!-- Wrap existing content -->
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
 
-<!-- Remove the old <html>, <head>, <body> tags and their content -->
+{% block content %}
 <div class="container mobile-app-layout">
     <div class="main-content mobile-panel">
+
         <div class="mobile-page-header">
-            <a href="{{ url_for('chat') }}" class="back-button">Back</a>
+            <a href="{{ url_for('chat') }}" class="back-button">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
             <h3 class="page-title">Friends</h3>
+            {# Spacer to keep title centred #}
+            <span aria-hidden="true" style="width:4rem;"></span>
         </div>
 
+        {# FIX: Use the friends-message-container classes defined in style.css
+               instead of the non-existent message-container class #}
         {% if message %}
-        <div class="message-container {{ 'success' if message_type == 'success' else 'error' }}">
+        <div class="friends-message-container {{ 'success' if message_type == 'success' else 'error' }}"
+             role="alert">
             <p>{{ message }}</p>
         </div>
         {% endif %}
 
+        <!-- Send Friend Request -->
         <div class="section">
-            <h3>Send Friend Request</h3>
-            <form action="{{ url_for('friends') }}" method="POST">
+            <h3><i class="fas fa-user-plus"></i> Send Friend Request</h3>
+            <form action="{{ url_for('friends') }}" method="POST" class="friends-section">
+                {# FIX: CSRF token on every mutating form #}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="send_request">
-                <input type="text" name="target_username" placeholder="Enter username" required>
-                <button type="submit">Send Request</button>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <label for="send-request-input" class="visually-hidden">Username</label>
+                    <input type="text"
+                           id="send-request-input"
+                           name="target_username"
+                           placeholder="Enter username"
+                           autocomplete="off"
+                           required
+                           style="flex:1;padding:12px 16px;border:1px solid var(--border);
+                                  border-radius:24px;background:var(--darker);
+                                  color:var(--light);font-size:1rem;outline:none;min-width:180px;">
+                    <button type="submit" class="button">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                </div>
             </form>
         </div>
 
+        <!-- Pending Requests -->
         <div class="section">
-            <h3>Pending Requests ({{ user_data.requests|length }})</h3>
+            <h3>
+                <i class="fas fa-clock"></i>
+                Pending Requests
+                {# FIX: Show count badge #}
+                {% if user_data.requests %}
+                <span style="background:var(--primary);color:var(--darker);
+                             font-size:.75rem;padding:2px 8px;border-radius:10px;
+                             margin-left:8px;font-weight:600;">
+                    {{ user_data.requests | length }}
+                </span>
+                {% endif %}
+            </h3>
             {% if user_data.requests %}
-                <ul>
-                    {% for req_user in user_data.requests %}
-                        <li>
-                            <span>{{ req_user }}</span>
-                            <div class="actions">
-                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                    <input type="hidden" name="action" value="accept_request">
-                                    <input type="hidden" name="target_username" value="{{ req_user }}">
-                                    <button type="submit" class="button small-button accept">Accept</button>
-                                </form>
-                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                    <input type="hidden" name="action" value="decline_request">
-                                    <input type="hidden" name="target_username" value="{{ req_user }}">
-                                    <button type="submit" class="button small-button decline danger-button">Decline</button>
-                                </form>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
+            <ul style="list-style:none;padding:0;">
+                {% for req_user in user_data.requests %}
+                <li style="display:flex;justify-content:space-between;
+                           align-items:center;padding:12px 0;
+                           border-bottom:1px solid var(--light-gray);">
+                    <span>
+                        <i class="fas fa-user" style="color:var(--primary);margin-right:8px;"></i>
+                        {{ req_user }}
+                    </span>
+                    <div style="display:flex;gap:8px;">
+                        <form action="{{ url_for('friends') }}" method="POST"
+                              style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="accept_request">
+                            <input type="hidden" name="target_username" value="{{ req_user }}">
+                            <button type="submit" class="friends-small-button accept">
+                                <i class="fas fa-check"></i> Accept
+                            </button>
+                        </form>
+                        <form action="{{ url_for('friends') }}" method="POST"
+                              style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="decline_request">
+                            <input type="hidden" name="target_username" value="{{ req_user }}">
+                            <button type="submit" class="friends-small-button decline">
+                                <i class="fas fa-times"></i> Decline
+                            </button>
+                        </form>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p>No pending friend requests.</p>
+            <p style="color:var(--gray);font-style:italic;">No pending friend requests.</p>
             {% endif %}
         </div>
 
+        <!-- My Friends -->
         <div class="section">
-            <h3>My Friends ({{ user_data.friends|length }})</h3>
+            <h3>
+                <i class="fas fa-users"></i>
+                My Friends
+                {% if user_data.friends %}
+                <span style="background:var(--primary);color:var(--darker);
+                             font-size:.75rem;padding:2px 8px;border-radius:10px;
+                             margin-left:8px;font-weight:600;">
+                    {{ user_data.friends | length }}
+                </span>
+                {% endif %}
+            </h3>
             {% if user_data.friends %}
-                <ul>
-                    {% for friend_user in user_data.friends %}
-                        <li>
-                            <span>{{ friend_user }}</span>
-                            <div class="actions">
-                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                    <input type="hidden" name="action" value="remove_friend">
-                                    <input type="hidden" name="target_username" value="{{ friend_user }}">
-                                    <button type="submit" class="button small-button remove danger-button">Remove</button>
-                                </form>
-                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                    <input type="hidden" name="action" value="block_user">
-                                    <input type="hidden" name="target_username" value="{{ friend_user }}">
-                                    <button type="submit" class="button small-button block danger-button">Block</button>
-                                </form>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
+            <ul style="list-style:none;padding:0;">
+                {% for friend_user in user_data.friends %}
+                <li style="display:flex;justify-content:space-between;
+                           align-items:center;padding:12px 0;
+                           border-bottom:1px solid var(--light-gray);">
+                    <span>
+                        <i class="fas fa-user-check"
+                           style="color:var(--success);margin-right:8px;"></i>
+                        {{ friend_user }}
+                    </span>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                        <a href="{{ url_for('chat') }}"
+                           data-no-transition
+                           onclick="localStorage.setItem('activeFriend','{{ friend_user }}');
+                                    localStorage.setItem('activeRoomType','direct');"
+                           class="friends-small-button unblock">
+                            <i class="fas fa-comment"></i> Chat
+                        </a>
+                        <form action="{{ url_for('friends') }}" method="POST"
+                              style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="remove_friend">
+                            <input type="hidden" name="target_username" value="{{ friend_user }}">
+                            <button type="submit" class="friends-small-button remove"
+                                    onclick="return confirm('Remove {{ friend_user }} from friends?')">
+                                <i class="fas fa-user-minus"></i> Remove
+                            </button>
+                        </form>
+                        <form action="{{ url_for('friends') }}" method="POST"
+                              style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="block_user">
+                            <input type="hidden" name="target_username" value="{{ friend_user }}">
+                            <button type="submit" class="friends-small-button block"
+                                    onclick="return confirm('Block {{ friend_user }}? This will also remove them from your friends list.')">
+                                <i class="fas fa-ban"></i> Block
+                            </button>
+                        </form>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p>You have no friends yet. Send a request!</p>
+            <p style="color:var(--gray);font-style:italic;">
+                You have no friends yet. Send a request above!
+            </p>
             {% endif %}
         </div>
 
+        <!-- Blocked Users -->
         <div class="section">
-            <h3>Blocked Users ({{ user_data.blocked|length }})</h3>
+            <h3>
+                <i class="fas fa-ban"></i>
+                Blocked Users
+                {% if user_data.blocked %}
+                <span style="background:var(--danger);color:white;
+                             font-size:.75rem;padding:2px 8px;border-radius:10px;
+                             margin-left:8px;font-weight:600;">
+                    {{ user_data.blocked | length }}
+                </span>
+                {% endif %}
+            </h3>
             {% if user_data.blocked %}
-                <ul>
-                    {% for blocked_user in user_data.blocked %}
-                        <li>
-                            <span>{{ blocked_user }}</span>
-                            <div class="actions">
-                                <form action="{{ url_for('friends') }}" method="POST" style="display:inline;">
-                                    <input type="hidden" name="action" value="unblock_user">
-                                    <input type="hidden" name="target_username" value="{{ blocked_user }}">
-                                    <button type="submit" class="button small-button unblock">Unblock</button>
-                                </form>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
+            <ul style="list-style:none;padding:0;">
+                {% for blocked_user in user_data.blocked %}
+                <li style="display:flex;justify-content:space-between;
+                           align-items:center;padding:12px 0;
+                           border-bottom:1px solid var(--light-gray);">
+                    <span>
+                        <i class="fas fa-ban"
+                           style="color:var(--danger);margin-right:8px;"></i>
+                        {{ blocked_user }}
+                    </span>
+                    <form action="{{ url_for('friends') }}" method="POST"
+                          style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="unblock_user">
+                        <input type="hidden" name="target_username" value="{{ blocked_user }}">
+                        <button type="submit" class="friends-small-button unblock">
+                            <i class="fas fa-unlock"></i> Unblock
+                        </button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p>No users blocked.</p>
+            <p style="color:var(--gray);font-style:italic;">No blocked users.</p>
             {% endif %}
         </div>
-    </div>
-</div>
-<!-- Remove the old closing </body> and </html> tags -->
-{% endblock %} <!-- End the content block -->
+
+    </div><!-- /main-content -->
+</div><!-- /container -->
+
+<style>
+/* FIX: visually-hidden helper for accessible label */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+</style>
+{% endblock %}
