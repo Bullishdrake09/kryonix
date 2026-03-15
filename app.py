@@ -35,6 +35,7 @@ login_manager.login_view = 'login'
 
 user_sids = {}
 active_calls = {}
+active_group_calls = {}  # group_room_id -> {participants: set, type: 'video'|'audio'}
 
 # Rate limiting
 user_message_times = defaultdict(lambda: deque(maxlen=20))
@@ -1893,6 +1894,177 @@ def handle_ice_candidate(data):
         }, room=room, include_self=False)
     except Exception as e:
         app.logger.error(f"Error in handle_ice_candidate: {e}")
+
+# --- Group Call Events ---
+@socketio.on('group_call_start')
+def handle_group_call_start(data):
+    """User starts/joins a group call in a group chat room."""
+    try:
+        username = current_user.username
+        room = data['room']  # group room id like 'group_abc123'
+        call_type = data.get('type', 'video')
+
+        if current_user.is_timed_out:
+            emit('error', {'message': 'You are timed out and cannot make calls.'}, room=request.sid)
+            return
+
+        # Verify user is in the group
+        group_chats = load_group_chats()
+        if room not in group_chats or username not in group_chats[room].get('members', []):
+            emit('error', {'message': 'You are not a member of this group.'}, room=request.sid)
+            return
+
+        call_room = f'call_{room}'
+        
+        # Init group call state
+        if call_room not in active_group_calls:
+            active_group_calls[call_room] = {
+                'participants': set(),
+                'type': call_type,
+                'room': room
+            }
+
+        existing_participants = list(active_group_calls[call_room]['participants'])
+        active_group_calls[call_room]['participants'].add(username)
+
+        # Join socket room for the call
+        join_room(call_room)
+
+        # Tell joiner about existing participants so they can initiate offers
+        emit('group_call_joined', {
+            'call_room': call_room,
+            'existing_participants': existing_participants,
+            'type': call_type
+        }, room=request.sid)
+
+        # Notify existing participants someone new joined
+        emit('group_call_user_joined', {
+            'username': username,
+            'call_room': call_room
+        }, room=call_room, include_self=False)
+
+        # Notify all group members (not in call) about the ongoing call
+        members = group_chats[room].get('members', [])
+        for member in members:
+            if member != username and member not in active_group_calls[call_room]['participants']:
+                if member in user_sids:
+                    for sid in user_sids[member]:
+                        emit('incoming_group_call', {
+                            'call_room': call_room,
+                            'room': room,
+                            'group_name': group_chats[room].get('name', 'Group'),
+                            'started_by': username,
+                            'type': call_type,
+                            'participant_count': len(active_group_calls[call_room]['participants'])
+                        }, room=sid)
+
+        app.logger.info(f'{username} joined group call in {call_room}')
+    except Exception as e:
+        app.logger.error(f"Error in handle_group_call_start: {e}")
+        emit('error', {'message': 'Failed to join group call.'}, room=request.sid)
+
+
+@socketio.on('group_call_leave')
+def handle_group_call_leave(data):
+    """User leaves a group call."""
+    try:
+        username = current_user.username
+        call_room = data['call_room']
+
+        if call_room in active_group_calls:
+            active_group_calls[call_room]['participants'].discard(username)
+            leave_room(call_room)
+
+            # Notify others
+            emit('group_call_user_left', {
+                'username': username,
+                'call_room': call_room
+            }, room=call_room)
+
+            # Clean up if empty
+            if not active_group_calls[call_room]['participants']:
+                del active_group_calls[call_room]
+                app.logger.info(f'Group call {call_room} ended (no participants)')
+
+        app.logger.info(f'{username} left group call {call_room}')
+    except Exception as e:
+        app.logger.error(f"Error in handle_group_call_leave: {e}")
+
+
+@socketio.on('group_call_reject')
+def handle_group_call_reject(data):
+    """User rejects an incoming group call notification."""
+    try:
+        username = current_user.username
+        call_room = data['call_room']
+        # Just acknowledge — no action needed since group call continues
+        emit('group_call_rejected', {
+            'username': username,
+            'call_room': call_room
+        }, room=call_room)
+    except Exception as e:
+        app.logger.error(f"Error in handle_group_call_reject: {e}")
+
+
+@socketio.on('group_webrtc_offer')
+def handle_group_webrtc_offer(data):
+    """Relay WebRTC offer to a specific peer in a group call."""
+    try:
+        sender = current_user.username
+        call_room = data['call_room']
+        target = data['target']
+        offer = data['offer']
+
+        if target in user_sids:
+            for sid in user_sids[target]:
+                emit('group_webrtc_offer', {
+                    'offer': offer,
+                    'sender': sender,
+                    'call_room': call_room
+                }, room=sid)
+    except Exception as e:
+        app.logger.error(f"Error in handle_group_webrtc_offer: {e}")
+
+
+@socketio.on('group_webrtc_answer')
+def handle_group_webrtc_answer(data):
+    """Relay WebRTC answer to a specific peer in a group call."""
+    try:
+        sender = current_user.username
+        call_room = data['call_room']
+        target = data['target']
+        answer = data['answer']
+
+        if target in user_sids:
+            for sid in user_sids[target]:
+                emit('group_webrtc_answer', {
+                    'answer': answer,
+                    'sender': sender,
+                    'call_room': call_room
+                }, room=sid)
+    except Exception as e:
+        app.logger.error(f"Error in handle_group_webrtc_answer: {e}")
+
+
+@socketio.on('group_webrtc_ice')
+def handle_group_webrtc_ice(data):
+    """Relay ICE candidate to a specific peer in a group call."""
+    try:
+        sender = current_user.username
+        call_room = data['call_room']
+        target = data['target']
+        candidate = data['candidate']
+
+        if target in user_sids:
+            for sid in user_sids[target]:
+                emit('group_webrtc_ice', {
+                    'candidate': candidate,
+                    'sender': sender,
+                    'call_room': call_room
+                }, room=sid)
+    except Exception as e:
+        app.logger.error(f"Error in handle_group_webrtc_ice: {e}")
+
 
 if __name__ == '__main__':
     all_users = load_all_users_data()

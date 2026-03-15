@@ -105,6 +105,14 @@
                         <i class="fas fa-video"></i>
                     </button>
                 </div>
+                <div class="call-icons" id="group-call-icons" style="display: none;">
+                    <button class="call-icon-btn" id="group-audio-call-btn" title="Group Audio Call">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button class="call-icon-btn" id="group-video-call-btn" title="Group Video Call">
+                        <i class="fas fa-video"></i>
+                    </button>
+                </div>
                 <a id="edit-group-btn" style="display: none;">Edit Group</a>
             </div>
         </div>
@@ -272,7 +280,58 @@
     </div>
 </div>
 
+<!-- Group Call Modal -->
+<div class="call-modal" id="group-call-modal">
+    <div class="call-content group-call-content">
+        <div class="call-header">
+            <h3 id="group-call-title"><i class="fas fa-users"></i> Group Call</h3>
+            <span id="group-call-status" style="color: var(--gray);">Connecting...</span>
+        </div>
+        <button class="minimize-call-btn" id="minimize-group-call-btn" title="Minimize">
+            <i class="fas fa-minus"></i>
+        </button>
+        <div class="group-video-grid" id="group-video-grid">
+            <!-- Local video tile -->
+            <div class="group-video-tile" id="local-group-tile">
+                <video id="local-group-video" autoplay playsinline muted></video>
+                <div class="video-tile-label" id="local-group-label">You</div>
+            </div>
+        </div>
+        <div class="call-controls">
+            <button class="call-button mute" id="group-mute-audio-btn" title="Mute Audio">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="call-button mute" id="group-mute-video-btn" title="Turn Off Video">
+                <i class="fas fa-video"></i>
+            </button>
+            <button class="call-button share" id="group-share-screen-btn" title="Share Screen">
+                <i class="fas fa-desktop"></i>
+            </button>
+            <button class="call-button end" id="group-end-call-btn" title="Leave Call">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Incoming Group Call Modal -->
+<div class="incoming-call-modal" id="incoming-group-call-modal">
+    <h3><i class="fas fa-users" style="color: var(--primary);"></i> Incoming Group Call</h3>
+    <p id="group-call-group-name" style="font-weight:700; color: var(--primary);"></p>
+    <p id="group-caller-name">Someone started a call...</p>
+    <p id="group-call-type-text">Video Call</p>
+    <div class="incoming-call-actions">
+        <button class="answer-button" id="answer-group-call-btn">
+            <i class="fas fa-phone"></i> Join
+        </button>
+        <button class="reject-button" id="reject-group-call-btn">
+            <i class="fas fa-phone-slash"></i> Decline
+        </button>
+    </div>
+</div>
+
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/chat-main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chat-webrtc.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat-group-webrtc.js') }}"></script>
 {% endblock %}
