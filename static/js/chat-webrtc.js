@@ -251,10 +251,12 @@
         call.incomingType = data.type;
 
         openIncomingModal(data.caller, data.type);
+        window.KryonixSounds?.playCalling();
 
         // Auto-dismiss ringing after 45 s
         call.ringTimer = setTimeout(() => {
             closeIncomingModal();
+            window.KryonixSounds?.stopCalling();
             getSocket().emit('reject_call', { caller: data.caller, room: data.room });
         }, 45000);
     }
@@ -262,6 +264,7 @@
     // ── Callee: answer ────────────────────────────────────────────────────────
     async function answerCall() {
         closeIncomingModal();
+        window.KryonixSounds?.stopCalling();
 
         try {
             await attachLocalStream(await getLocalMedia(call.incomingType));
@@ -288,6 +291,7 @@
     // ── Callee: reject ────────────────────────────────────────────────────────
     function rejectCall() {
         closeIncomingModal();
+        window.KryonixSounds?.stopCalling();
         getSocket().emit('reject_call', { caller: call.callerName, room: call.room });
         call.callerName   = null;
         call.room         = null;
@@ -336,6 +340,9 @@
     }
 
     function endCallCleanup() {
+        // Stop any ringing sound
+        window.KryonixSounds?.stopCalling();
+
         // Stop all media tracks
         [call.localStream, call.screenStream].forEach(stream => {
             if (stream) stream.getTracks().forEach(t => t.stop());

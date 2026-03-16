@@ -10,9 +10,6 @@
 <div class="container mobile-app-layout">
     <div class="main-content mobile-panel" style="overflow-y:auto;">
 
-        {# FIX: A single header element whose content adapts via CSS / JS.
-               The original had two overlapping header divs that both rendered
-               at the same time before the JS resize check fired, causing a flash. #}
         <div class="mobile-page-header" id="settings-header">
             <a href="{{ url_for('chat') }}" class="back-button" id="back-btn">
                 <i class="fas fa-arrow-left"></i> Back
@@ -28,17 +25,14 @@
         </div>
         {% endif %}
 
-        <!-- Profile Picture -->
+        <!-- ── Profile Picture ───────────────────────────────────── -->
         <div class="section">
             <h3><i class="fas fa-camera"></i> Profile Picture</h3>
             <div class="profile-picture-section">
                 <div class="current-profile-pic">
                     {% if user_data.profile_picture %}
-                    <img src="{{ user_data.profile_picture }}"
-                         alt="Profile picture"
-                         id="profile-preview">
+                    <img src="{{ user_data.profile_picture }}" alt="Profile picture" id="profile-preview">
                     {% else %}
-                    {# FIX: Escape username to prevent XSS in the initial letter #}
                     <div class="default-avatar" id="profile-preview">
                         {{ current_user.username[0].upper() | e }}
                     </div>
@@ -51,54 +45,106 @@
                     <input type="file" id="profile-pic-input"
                            accept="image/png,image/jpeg,image/gif,image/webp"
                            style="display:none;">
-                    <button class="button remove-pic-btn"
-                            id="remove-pic-btn"
+                    <button class="button remove-pic-btn" id="remove-pic-btn"
                             {% if not user_data.profile_picture %}disabled{% endif %}>
                         <i class="fas fa-trash"></i> Remove
                     </button>
                 </div>
             </div>
-            {# FIX: Upload progress indicator (hidden by default) #}
-            <p id="pic-upload-status"
-               style="margin-top:12px;font-size:.875rem;color:var(--gray);display:none;"></p>
+            <p id="pic-upload-status" style="margin-top:12px;font-size:.875rem;color:var(--gray);display:none;"></p>
         </div>
 
-        <!-- Account Settings -->
+        <!-- ── Message Edit Sound ────────────────────────────────── -->
+        <div class="section">
+            <h3><i class="fas fa-music"></i> Message Sound</h3>
+            <p class="section-desc">Played when a message is edited. Max 1 MB · MP3 / OGG / WAV</p>
+            <div class="sound-row">
+                <div class="sound-current" id="msg-sound-label">
+                    {% if user_data.sound_message %}
+                        <i class="fas fa-check-circle" style="color:var(--success);"></i>
+                        Custom sound active
+                    {% else %}
+                        <i class="fas fa-music" style="opacity:.4;"></i>
+                        Using default sound
+                    {% endif %}
+                </div>
+                <div class="sound-actions">
+                    {% if user_data.sound_message %}
+                    <button class="button sound-preview-btn" data-src="{{ user_data.sound_message }}">
+                        <i class="fas fa-play"></i> Preview
+                    </button>
+                    {% endif %}
+                    <label for="msg-sound-input" class="button upload-pic-btn">
+                        <i class="fas fa-upload"></i> Upload
+                    </label>
+                    <input type="file" id="msg-sound-input" accept=".mp3,.ogg,.wav" style="display:none;">
+                    <button class="button remove-pic-btn" id="remove-msg-sound-btn"
+                            {% if not user_data.sound_message %}disabled{% endif %}>
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+            <p id="msg-sound-status" style="margin-top:10px;font-size:.875rem;display:none;"></p>
+        </div>
+
+        <!-- ── Calling Sound ─────────────────────────────────────── -->
+        <div class="section">
+            <h3><i class="fas fa-phone"></i> Calling / Ringtone Sound</h3>
+            <p class="section-desc">Played when you receive an incoming call. Max 10 MB · MP3 / OGG / WAV</p>
+            <div class="sound-row">
+                <div class="sound-current" id="call-sound-label">
+                    {% if user_data.sound_calling %}
+                        <i class="fas fa-check-circle" style="color:var(--success);"></i>
+                        Custom ringtone active
+                    {% else %}
+                        <i class="fas fa-phone" style="opacity:.4;"></i>
+                        Using default ringtone
+                    {% endif %}
+                </div>
+                <div class="sound-actions">
+                    {% if user_data.sound_calling %}
+                    <button class="button sound-preview-btn" data-src="{{ user_data.sound_calling }}">
+                        <i class="fas fa-play"></i> Preview
+                    </button>
+                    {% endif %}
+                    <label for="call-sound-input" class="button upload-pic-btn">
+                        <i class="fas fa-upload"></i> Upload
+                    </label>
+                    <input type="file" id="call-sound-input" accept=".mp3,.ogg,.wav" style="display:none;">
+                    <button class="button remove-pic-btn" id="remove-call-sound-btn"
+                            {% if not user_data.sound_calling %}disabled{% endif %}>
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+            <p id="call-sound-status" style="margin-top:10px;font-size:.875rem;display:none;"></p>
+        </div>
+
+        <!-- ── Account Settings ──────────────────────────────────── -->
         <div class="section">
             <h3><i class="fas fa-user-cog"></i> Account Settings</h3>
-            <form action="{{ url_for('settings') }}"
-                  method="POST"
-                  class="settings-form">
+            <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="section"    value="account">
 
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text"
-                           id="username"
-                           name="username"
+                    <input type="text" id="username" name="username"
                            value="{{ user_data.username | e }}"
-                           placeholder="Your username"
-                           minlength="3"
-                           autocomplete="username">
+                           placeholder="Your username" minlength="3" autocomplete="username">
                     <small>Changing your username will log you out.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email"
-                           id="email"
-                           name="email"
+                    <input type="email" id="email" name="email"
                            value="{{ user_data.email | e }}"
-                           placeholder="Your email"
-                           autocomplete="email">
+                           placeholder="Your email" autocomplete="email">
                 </div>
 
                 <div class="form-group">
                     <label for="current_password">Current Password</label>
-                    <input type="password"
-                           id="current_password"
-                           name="current_password"
+                    <input type="password" id="current_password" name="current_password"
                            placeholder="Enter current password to change"
                            autocomplete="current-password">
                     <small>Leave blank if you are not changing your password.</small>
@@ -106,11 +152,8 @@
 
                 <div class="form-group">
                     <label for="new_password">New Password</label>
-                    <input type="password"
-                           id="new_password"
-                           name="new_password"
-                           placeholder="Enter new password"
-                           minlength="6"
+                    <input type="password" id="new_password" name="new_password"
+                           placeholder="Enter new password" minlength="6"
                            autocomplete="new-password">
                     <small>Must be at least 6 characters.</small>
                 </div>
@@ -121,125 +164,64 @@
             </form>
         </div>
 
-        <a href="{{ url_for('logout') }}" class="button logout-button"
-           style="margin:0 24px 24px;">
+        <a href="{{ url_for('logout') }}" class="button logout-button" style="margin:0 24px 24px;">
             <i class="fas fa-sign-out-alt"></i> Logout
         </a>
 
-    </div><!-- /main-content -->
-</div><!-- /container -->
+    </div>
+</div>
+
+<!-- Hidden audio element for preview -->
+<audio id="sound-preview-player" style="display:none;"></audio>
 
 <style>
-body {
-    overflow-y: auto;
-    height: auto;
-    min-height: 100dvh;
-}
+body { overflow-y:auto; height:auto; min-height:100dvh; }
 
-.form-group {
-    margin-bottom: 20px;
-}
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: var(--light);
-}
+.form-group { margin-bottom: 20px; }
+.form-group label { display:block; margin-bottom:8px; font-weight:600; color:var(--light); }
 .form-group input[type="text"],
 .form-group input[type="email"],
 .form-group input[type="password"] {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    background: var(--darker);
-    color: var(--light);
-    outline: none;
-    transition: border-color 0.2s;
+    width:100%; padding:12px 16px; border:1px solid var(--border);
+    border-radius:8px; font-size:14px; background:var(--darker);
+    color:var(--light); outline:none; transition:border-color .2s;
 }
-.form-group input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.2);
-}
-.form-group small {
-    display: block;
-    margin-top: 4px;
-    color: var(--gray);
-    font-size: .85rem;
-}
+.form-group input:focus { border-color:var(--primary); box-shadow:0 0 0 2px rgba(76,201,240,.2); }
+.form-group small { display:block; margin-top:4px; color:var(--gray); font-size:.85rem; }
 
 /* Profile picture */
-.profile-picture-section {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    flex-wrap: wrap;
-}
+.profile-picture-section { display:flex; align-items:center; gap:24px; flex-wrap:wrap; }
 .current-profile-pic {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 3px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--light-gray);
-    flex-shrink: 0;
+    width:120px; height:120px; border-radius:50%; overflow:hidden;
+    border:3px solid var(--border); display:flex; align-items:center;
+    justify-content:center; background:var(--light-gray); flex-shrink:0;
 }
-.current-profile-pic img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+.current-profile-pic img { width:100%; height:100%; object-fit:cover; }
 .default-avatar {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-    font-weight: bold;
-    color: var(--light);
-    background: var(--primary);
+    width:100%; height:100%; display:flex; align-items:center;
+    justify-content:center; font-size:3rem; font-weight:bold;
+    color:var(--light); background:var(--primary);
 }
-.profile-pic-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.upload-pic-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    margin: 0;
-}
-.remove-pic-btn {
-    background: var(--danger) !important;
-    color: white !important;
-}
-.remove-pic-btn:hover:not(:disabled) {
-    background: #e54d4d !important;
-}
-.remove-pic-btn:disabled {
-    opacity: .5;
-    cursor: not-allowed;
-}
+.profile-pic-actions { display:flex; flex-direction:column; gap:12px; }
+.upload-pic-btn { display:inline-flex; align-items:center; gap:8px; cursor:pointer; margin:0; }
+.remove-pic-btn { background:var(--danger) !important; color:white !important; }
+.remove-pic-btn:hover:not(:disabled) { background:#e54d4d !important; }
+.remove-pic-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+/* Sound sections */
+.section-desc { font-size:.875rem; color:var(--gray); margin:-8px 0 16px; }
+.sound-row { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.sound-current { flex:1; min-width:160px; font-size:.9rem; color:var(--light); display:flex; align-items:center; gap:8px; }
+.sound-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.sound-actions .button { margin:0; padding:9px 16px; font-size:.875rem; }
 
 @media (max-width: 768px) {
-    .profile-picture-section {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .profile-pic-actions {
-        width: 100%;
-    }
-    .profile-pic-actions .button {
-        width: 100%;
-        text-align: center;
-    }
+    .profile-picture-section { flex-direction:column; align-items:flex-start; }
+    .profile-pic-actions { width:100%; }
+    .profile-pic-actions .button { width:100%; text-align:center; }
+    .sound-row { flex-direction:column; align-items:flex-start; }
+    .sound-actions { width:100%; }
+    .sound-actions .button { flex:1; text-align:center; }
 }
 </style>
 {% endblock %}
@@ -249,107 +231,175 @@ body {
 (function () {
     'use strict';
 
-    var profilePicInput  = document.getElementById('profile-pic-input');
-    var removePicBtn     = document.getElementById('remove-pic-btn');
-    var uploadStatus     = document.getElementById('pic-upload-status');
+    /* ── Profile picture ───────────────────────────────────── */
+    var profilePicInput = document.getElementById('profile-pic-input');
+    var removePicBtn    = document.getElementById('remove-pic-btn');
+    var uploadStatus    = document.getElementById('pic-upload-status');
 
-    // FIX: Get the preview element freshly each time since it may be replaced
-    function getPreview() {
-        return document.getElementById('profile-preview');
-    }
+    function getPreview() { return document.getElementById('profile-preview'); }
 
-    function setStatus(msg, isError) {
-        uploadStatus.textContent = msg;
+    function setPicStatus(msg, isError) {
+        uploadStatus.textContent   = msg;
         uploadStatus.style.display = msg ? 'block' : 'none';
-        uploadStatus.style.color = isError ? 'var(--danger)' : 'var(--success)';
+        uploadStatus.style.color   = isError ? 'var(--danger)' : 'var(--success)';
     }
 
-    // ── Upload profile picture ─────────────────────────────────────────────
     profilePicInput.addEventListener('change', async function (e) {
         var file = e.target.files[0];
         if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            setStatus('Please select an image file.', true);
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            setStatus('Image must be smaller than 5 MB.', true);
-            return;
-        }
-
-        setStatus('Uploading…', false);
-
-        var formData = new FormData();
-        formData.append('file', file);
-
+        if (!file.type.startsWith('image/')) { setPicStatus('Please select an image file.', true); return; }
+        if (file.size > 5 * 1024 * 1024)    { setPicStatus('Image must be smaller than 5 MB.', true); return; }
+        setPicStatus('Uploading…', false);
+        var fd = new FormData();
+        fd.append('file', file);
         try {
-            var resp = await fetch('/upload_profile_picture', {
-                method: 'POST',
-                body: formData
-            });
+            var resp = await fetch('/upload_profile_picture', { method:'POST', body:fd });
             var data = await resp.json();
-
-            if (data.error) {
-                setStatus('Upload failed: ' + data.error, true);
-            } else if (data.url) {
-                // Replace preview element with an <img>
-                var preview = getPreview();
-                var img = document.createElement('img');
-                img.src = data.url;
-                img.alt = 'Profile picture';
-                img.id  = 'profile-preview';
-                preview.parentNode.replaceChild(img, preview);
-
-                removePicBtn.disabled = false;
-                setStatus('Profile picture updated!', false);
-
-                // Reload after a short delay so header avatar also updates
-                setTimeout(function () { location.reload(); }, 1200);
-            }
-        } catch (err) {
-            console.error(err);
-            setStatus('Failed to upload profile picture.', true);
-        }
+            if (data.error) { setPicStatus('Upload failed: ' + data.error, true); return; }
+            var img = document.createElement('img');
+            img.src = data.url; img.alt = 'Profile picture'; img.id = 'profile-preview';
+            getPreview().parentNode.replaceChild(img, getPreview());
+            removePicBtn.disabled = false;
+            setPicStatus('Profile picture updated!', false);
+            setTimeout(function () { location.reload(); }, 1200);
+        } catch(err) { setPicStatus('Failed to upload profile picture.', true); }
     });
 
-    // ── Remove profile picture ─────────────────────────────────────────────
     removePicBtn.addEventListener('click', async function () {
         if (!confirm('Remove your profile picture?')) return;
-
-        setStatus('Removing…', false);
-
+        setPicStatus('Removing…', false);
         try {
             var resp = await fetch('/upload_profile_picture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ remove: true })
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({remove:true})
             });
             var data = await resp.json();
-
             if (data.success) {
-                // Replace <img> with the default avatar letter
-                var preview = getPreview();
                 var div = document.createElement('div');
-                div.className = 'default-avatar';
-                div.id = 'profile-preview';
-                // FIX: Read username from the page safely; don't interpolate raw Jinja into JS
-                div.textContent = (document.querySelector('.username') || {}).textContent
-                                    ? document.querySelector('.username').textContent.trim()[0].toUpperCase()
-                                    : '?';
-                preview.parentNode.replaceChild(div, preview);
-
+                div.className = 'default-avatar'; div.id = 'profile-preview';
+                var uEl = document.querySelector('.username');
+                div.textContent = uEl ? uEl.textContent.trim()[0].toUpperCase() : '?';
+                getPreview().parentNode.replaceChild(div, getPreview());
                 removePicBtn.disabled = true;
-                setStatus('Profile picture removed.', false);
+                setPicStatus('Profile picture removed.', false);
                 setTimeout(function () { location.reload(); }, 1200);
-            } else {
-                setStatus('Failed to remove profile picture.', true);
-            }
-        } catch (err) {
-            console.error(err);
-            setStatus('Failed to remove profile picture.', true);
-        }
+            } else { setPicStatus('Failed to remove profile picture.', true); }
+        } catch(err) { setPicStatus('Failed to remove profile picture.', true); }
     });
+
+    /* ── Generic sound uploader ────────────────────────────── */
+    var previewPlayer = document.getElementById('sound-preview-player');
+
+    // Preview buttons (may not exist if no custom sound)
+    document.querySelectorAll('.sound-preview-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var src = btn.dataset.src;
+            if (!src) return;
+            previewPlayer.src = src;
+            previewPlayer.play().catch(function(){});
+        });
+    });
+
+    function makeSoundHandler(opts) {
+        // opts: { inputId, removeBtnId, statusId, labelId, uploadType, maxBytes, maxLabel }
+        var input     = document.getElementById(opts.inputId);
+        var removeBtn = document.getElementById(opts.removeBtnId);
+        var statusEl  = document.getElementById(opts.statusId);
+        var labelEl   = document.getElementById(opts.labelId);
+
+        function setStatus(msg, isError) {
+            statusEl.textContent   = msg;
+            statusEl.style.display = msg ? 'block' : 'none';
+            statusEl.style.color   = isError ? 'var(--danger)' : 'var(--success)';
+        }
+
+        function updateLabel(hasCustom) {
+            if (hasCustom) {
+                labelEl.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Custom sound active';
+            } else {
+                var icon = opts.uploadType === 'message' ? 'music' : 'phone';
+                labelEl.innerHTML = '<i class="fas fa-' + icon + '" style="opacity:.4;"></i> Using default sound';
+            }
+        }
+
+        input.addEventListener('change', async function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var ext = file.name.split('.').pop().toLowerCase();
+            if (!['mp3','ogg','wav'].includes(ext)) {
+                setStatus('Only MP3, OGG, or WAV files are allowed.', true); return;
+            }
+            if (file.size > opts.maxBytes) {
+                setStatus('File too large. Max ' + opts.maxLabel + '.', true); return;
+            }
+            setStatus('Uploading…', false);
+            var fd = new FormData();
+            fd.append('file', file);
+            try {
+                var resp = await fetch('/upload_sound/' + opts.uploadType, { method:'POST', body:fd });
+                var data = await resp.json();
+                if (data.error) { setStatus('Upload failed: ' + data.error, true); return; }
+                setStatus('Sound updated!', false);
+                removeBtn.disabled = false;
+                updateLabel(true);
+                // Update preview button
+                var existingPreview = labelEl.parentNode.querySelector('.sound-preview-btn');
+                if (existingPreview) {
+                    existingPreview.dataset.src = data.url;
+                } else {
+                    var pb = document.createElement('button');
+                    pb.className = 'button sound-preview-btn';
+                    pb.dataset.src = data.url;
+                    pb.innerHTML = '<i class="fas fa-play"></i> Preview';
+                    pb.addEventListener('click', function() {
+                        previewPlayer.src = data.url;
+                        previewPlayer.play().catch(function(){});
+                    });
+                    removeBtn.parentNode.insertBefore(pb, removeBtn.parentNode.firstChild);
+                }
+            } catch(err) { setStatus('Failed to upload.', true); }
+        });
+
+        removeBtn.addEventListener('click', async function() {
+            if (!confirm('Remove your custom sound?')) return;
+            setStatus('Removing…', false);
+            try {
+                var resp = await fetch('/upload_sound/' + opts.uploadType, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({remove:true})
+                });
+                var data = await resp.json();
+                if (data.success !== undefined || !data.error) {
+                    setStatus('Sound removed. Using default.', false);
+                    removeBtn.disabled = true;
+                    updateLabel(false);
+                    var pb = removeBtn.parentNode.querySelector('.sound-preview-btn');
+                    if (pb) pb.remove();
+                } else { setStatus('Failed to remove sound.', true); }
+            } catch(err) { setStatus('Failed to remove sound.', true); }
+        });
+    }
+
+    makeSoundHandler({
+        inputId:    'msg-sound-input',
+        removeBtnId:'remove-msg-sound-btn',
+        statusId:   'msg-sound-status',
+        labelId:    'msg-sound-label',
+        uploadType: 'message',
+        maxBytes:   1 * 1024 * 1024,
+        maxLabel:   '1 MB',
+    });
+
+    makeSoundHandler({
+        inputId:    'call-sound-input',
+        removeBtnId:'remove-call-sound-btn',
+        statusId:   'call-sound-status',
+        labelId:    'call-sound-label',
+        uploadType: 'calling',
+        maxBytes:   10 * 1024 * 1024,
+        maxLabel:   '10 MB',
+    });
+
 }());
 </script>
 {% endblock %}

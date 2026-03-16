@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Factor Login – Kryonix</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .error-message {
+            color: red;
+            background-color: #ffe6e6;
+            border: 1px solid red;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .info-text {
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+            opacity: 0.85;
+        }
+        .resend-link {
+            display: block;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+        .code-input {
+            letter-spacing: 0.3em;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h2>Two-Factor Verification</h2>
+
+        <p class="info-text">
+            A 6-digit login code was sent to <strong>{{ masked_email }}</strong>.<br>
+            The code expires in 10 minutes.
+        </p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <p class="error-message" style="{{ 'color:green;background:#e6ffe6;border-color:green;' if category == 'info' else '' }}">
+                    {{ message }}
+                </p>
+            {% endfor %}
+        {% endwith %}
+
+        {% if error %}
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+
+        <form action="{{ url_for('verify_login') }}" method="post">
+            <input type="text" name="code" class="code-input"
+                   placeholder="000000" maxlength="6"
+                   inputmode="numeric" autocomplete="one-time-code" required>
+            <button type="submit">Confirm Login</button>
+        </form>
+
+        <a class="resend-link" href="{{ url_for('resend_login_2fa') }}">
+            Didn't receive a code? Resend
+        </a>
+        <a class="resend-link" href="{{ url_for('login') }}">
+            ← Back to login
+        </a>
+    </div>
+</body>
+</html>

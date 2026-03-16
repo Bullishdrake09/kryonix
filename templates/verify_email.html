@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email – Kryonix</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .error-message {
+            color: red;
+            background-color: #ffe6e6;
+            border: 1px solid red;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .info-text {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            opacity: 0.75;
+            line-height: 1.6;
+        }
+        .resend-link {
+            display: block;
+            text-align: center;
+            margin-top: 14px;
+            font-size: 0.88rem;
+            opacity: 0.6;
+        }
+        .resend-link:hover { opacity: 1; }
+        .code-input {
+            letter-spacing: 0.35em;
+            font-size: 1.5rem;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* ── Success state ── */
+        .success-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff3f81, #c0226a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 32px;
+            animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop-in {
+            from { transform: scale(0); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+        .success-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 0 10px;
+        }
+        .success-body {
+            text-align: center;
+            font-size: 0.95rem;
+            opacity: 0.65;
+            line-height: 1.7;
+            margin: 0 0 28px;
+        }
+        .success-body strong {
+            opacity: 1;
+            color: #ff3f81;
+        }
+        .btn-login {
+            display: block;
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #ff3f81, #c0226a);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            letter-spacing: 0.03em;
+            transition: opacity 0.2s;
+        }
+        .btn-login:hover { opacity: 0.88; }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+
+        {% if verified %}
+        <!-- ── SUCCESS STATE ── -->
+        <div class="success-icon">✓</div>
+        <h2 class="success-title">Email Verified!</h2>
+        <p class="success-body">
+            Your email address has been confirmed.<br>
+            You can now <strong>log in</strong> to your Kryonix account.
+        </p>
+        <a href="{{ url_for('login') }}" class="btn-login">Go to Login →</a>
+
+        {% else %}
+        <!-- ── VERIFICATION FORM ── -->
+        <h2>Verify Your Email</h2>
+        <p class="info-text">
+            We sent a 6-digit code to <strong>{{ masked_email }}</strong>.<br>
+            Enter it below to activate your account.
+        </p>
+
+        {% if error %}
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+
+        <form action="{{ url_for('verify_email') }}" method="post">
+            <input type="text" name="code" class="code-input"
+                   placeholder="000000" maxlength="6"
+                   inputmode="numeric" autocomplete="one-time-code" required>
+            <button type="submit">Verify Email</button>
+        </form>
+
+        <a class="resend-link" href="{{ url_for('resend_verify_email') }}">
+            Didn't receive a code? Resend
+        </a>
+        {% endif %}
+
+    </div>
+</body>
+</html>

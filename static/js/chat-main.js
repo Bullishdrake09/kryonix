@@ -2,6 +2,99 @@
 // Exports: window.socket, window.username, window.currentRoom,
 //          window.currentGroupRoom, window.showOverlay, window.hideOverlay
 
+// ── KryonixSounds — custom sound support (falls back to defaults) ─────────────
+const KryonixSounds = (function () {
+    let _messageSoundUrl = null;
+    let _callingSoundUrl = null;
+    let _callingAudio    = null;
+
+    async function init() {
+        try {
+            const resp = await fetch('/get_user_sounds');
+            const data = await resp.json();
+            _messageSoundUrl = data.sound_message || null;
+            _callingSoundUrl = data.sound_calling || null;
+        } catch (e) {
+            console.warn('KryonixSounds: could not load custom sounds:', e);
+        }
+    }
+
+    function _play(customUrl, defaultUrl) {
+        const src = customUrl || defaultUrl;
+        if (!src) return null;
+        const audio = new Audio(src);
+        audio.volume = 0.6;
+        audio.play().catch(() => {});
+        return audio;
+    }
+
+    return {
+        init,
+        playMessage() {
+            _play(_messageSoundUrl, '/static/message.mp3');
+        },
+        playCalling() {
+            // Loop the ringtone until stopCalling() is called
+            const src = _callingSoundUrl || '/static/calling.mp3';
+            if (_callingAudio) { _callingAudio.pause(); _callingAudio.currentTime = 0; }
+            _callingAudio = new Audio(src);
+            _callingAudio.loop = true;
+            _callingAudio.volume = 0.7;
+            _callingAudio.play().catch(() => {});
+        },
+        stopCalling() {
+            if (_callingAudio) {
+                _callingAudio.pause();
+                _callingAudio.currentTime = 0;
+                _callingAudio = null;
+            }
+        },
+    };
+})();
+KryonixSounds.init();
+window.KryonixSounds = KryonixSounds;
+
+// ── linkify — auto-detect URLs in message text ────────────────────────────────
+const _URL_REGEX = /(\bhttps?:\/\/[-\w+&@#/%?=~|!:,.;]*[-\w+&@#/%=~|])/gi;
+
+function linkify(text) {
+    if (!text) return '';
+    // If the text already contains HTML tags (images/videos), don't escape — just add links
+    const hasHtml = /<[a-z]/i.test(text);
+    if (hasHtml) {
+        // Only linkify plain-text nodes; leave existing HTML intact
+        return text.replace(_URL_REGEX, url =>
+            `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link">${url}</a>`
+        );
+    }
+    // Pure text — escape then linkify (XSS-safe)
+    const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    return escaped.replace(_URL_REGEX, url =>
+        `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link">${url}</a>`
+    );
+}
+
+// Inject link styles once
+(function () {
+    if (document.getElementById('kryonix-link-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'kryonix-link-styles';
+    s.textContent = `
+        .chat-link {
+            color: #f5c518 !important;
+            text-decoration: underline !important;
+            word-break: break-all;
+            cursor: pointer;
+        }
+        .chat-link:hover { color: #ffd740 !important; }
+    `;
+    document.head.appendChild(s);
+})();
+
 // ── Socket + globals ──────────────────────────────────────────────────────────
 const socket = io({
     reconnection:       true,
@@ -46,7 +139,7 @@ const overlayMessage     = document.getElementById('overlay-message');
 const selectChatPrompt   = document.getElementById('select-chat-prompt');
 const contactSearch      = document.getElementById('contact-search');
 const charCounter        = document.getElementById('char-counter');
-const notificationSound  = document.getElementById('notification-sound');
+// notificationSound is now handled by KryonixSounds (custom sound support)
 const callIcons          = document.getElementById('call-icons');
 const groupCallIcons     = document.getElementById('group-call-icons');
 const editGroupBtn       = document.getElementById('edit-group-btn');
@@ -203,16 +296,15 @@ if (Notification.permission !== 'granted' && Notification.permission !== 'denied
 }
 
 function notify(title, body, tag) {
+    // Always play the message sound — regardless of focus/visibility
+    KryonixSounds.playMessage();
+
+    // Desktop notification + title badge only when the page isn't in focus
     if (isPageFocused && isPageVisible) return;
 
     if (Notification.permission === 'granted') {
         const n = new Notification(title, { body, tag, icon: '/static/favicon.ico' });
         n.onclick = () => { window.focus(); n.close(); };
-    }
-
-    if (notificationSound) {
-        notificationSound.currentTime = 0;
-        notificationSound.play().catch(() => {});
     }
 
     if (!document.title.includes('New message')) {
@@ -502,7 +594,7 @@ function buildMessageEl(msg) {
     }
 
     const textSpan = document.createElement('span');
-    textSpan.innerHTML = msg.msg;
+    textSpan.innerHTML = linkify(msg.msg);
     content.appendChild(textSpan);
 
     const timeDiv = document.createElement('div');
@@ -560,7 +652,7 @@ function updateMessage(id, newText) {
     const el = chatMessagesDiv.querySelector(`[data-message-id="${id}"]`);
     if (!el) return;
     const span = el.querySelector('.message-content > span');
-    if (span) span.innerHTML = newText;
+    if (span) span.innerHTML = linkify(newText);
     const actions = el.querySelector('.message-actions');
     if (actions && newText.includes('<em>deleted message</em>')) actions.remove();
 }
@@ -594,7 +686,7 @@ function startEdit(id, currentText) {
             return;
         }
         socket.emit('edit_message', { message_id: id, new_text: newText, room: currentRoom });
-        span.innerHTML = newText + ' <em>(edited)</em>';
+        span.innerHTML = linkify(newText) + ' <em>(edited)</em>';
         input.replaceWith(span);
         if (actions) actions.style.visibility = '';
     }
@@ -925,6 +1017,10 @@ socket.on('error', data => {
         setTimeout(hideOverlay, 4000);
     }
 });
+
+// ── Socket: calling sound hooks ───────────────────────────────────────────────
+// Ringtone is managed directly in chat-webrtc.js and chat-group-webrtc.js
+// via window.KryonixSounds.playCalling() / stopCalling().
 
 // ── Group management ──────────────────────────────────────────────────────────
 createGroupBtn?.addEventListener('click', () => {

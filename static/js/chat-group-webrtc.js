@@ -212,6 +212,7 @@
     // ── Leave call ────────────────────────────────────────────────────────────
     function leaveCall() {
         if (!gc.active) return;
+        window.KryonixSounds?.stopCalling();
 
         Object.values(gc.peers).forEach(pc => pc.close());
         gc.peers = {};
@@ -339,6 +340,7 @@
             if (els.callerName)   els.callerName.textContent  = `${data.started_by} started a call${data.participant_count > 1 ? ` · ${data.participant_count} in call` : ''}`;
             if (els.callTypeText) els.callTypeText.textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
             if (els.incomingModal) els.incomingModal.style.display = 'flex';
+            window.KryonixSounds?.playCalling();
         });
 
         // WebRTC offer from a peer
@@ -401,6 +403,7 @@
                 const inc = gc.pendingIncoming;
                 if (!inc) return;
                 if (els.incomingModal) els.incomingModal.style.display = 'none';
+                window.KryonixSounds?.stopCalling();
 
                 gc.callRoom  = inc.call_room;
                 gc.groupRoom = inc.room;
@@ -427,6 +430,7 @@
                 if (gc.pendingIncoming) {
                     sock().emit('group_call_reject', { call_room: gc.pendingIncoming.call_room });
                 }
+                window.KryonixSounds?.stopCalling();
                 if (els.incomingModal) els.incomingModal.style.display = 'none';
                 gc.pendingIncoming = null;
             });
