@@ -31,11 +31,13 @@ const KryonixSounds = (function () {
     return {
         init,
         playMessage() {
-            _play(_messageSoundUrl, '/static/message.mp3');
+            // FIX: moved sounds to static/sounds/
+            _play(_messageSoundUrl, '/static/sounds/message.mp3');
         },
         playCalling() {
             // Loop the ringtone until stopCalling() is called
-            const src = _callingSoundUrl || '/static/calling.mp3';
+            // FIX: moved sounds to static/sounds/
+            const src = _callingSoundUrl || '/static/sounds/calling.mp3';
             if (_callingAudio) { _callingAudio.pause(); _callingAudio.currentTime = 0; }
             _callingAudio = new Audio(src);
             _callingAudio.loop = true;
@@ -62,7 +64,6 @@ function linkify(text) {
     // If the text already contains HTML tags (images/videos), don't escape — just add links
     const hasHtml = /<[a-z]/i.test(text);
     if (hasHtml) {
-        // Only linkify plain-text nodes; leave existing HTML intact
         return text.replace(_URL_REGEX, url =>
             `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link">${url}</a>`
         );
@@ -109,19 +110,19 @@ const username = window.username;
 const MAX_MESSAGE_LENGTH = parseInt(document.getElementById('message-input').maxLength);
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let currentRoom     = null;
-let currentRoomType = 'direct';
+let currentRoom      = null;
+let currentRoomType  = 'direct';
 let isLoadingHistory = false;
-let typingTimeout   = null;
-let replyingTo      = null;
-let messageOffset   = 0;
-let hasMoreMessages = true;
-let isLoadingMore   = false;
+let typingTimeout    = null;
+let replyingTo       = null;
+let messageOffset    = 0;
+let hasMoreMessages  = true;
+let isLoadingMore    = false;
 let pendingMediaFile = null;
-let userProfiles    = {};
-let userScrolledUp  = false;
-let isAtBottom      = true;
-let pendingRequestCount = 0;  // friend-request badge
+let userProfiles     = {};
+let userScrolledUp   = false;
+let isAtBottom       = true;
+let pendingRequestCount = 0;
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
 const sidebar            = document.getElementById('sidebar');
@@ -139,7 +140,6 @@ const overlayMessage     = document.getElementById('overlay-message');
 const selectChatPrompt   = document.getElementById('select-chat-prompt');
 const contactSearch      = document.getElementById('contact-search');
 const charCounter        = document.getElementById('char-counter');
-// notificationSound is now handled by KryonixSounds (custom sound support)
 const callIcons          = document.getElementById('call-icons');
 const groupCallIcons     = document.getElementById('group-call-icons');
 const editGroupBtn       = document.getElementById('edit-group-btn');
@@ -164,10 +164,10 @@ const addMemberSelection = document.getElementById('add-member-selection');
 const confirmAddMembers  = document.getElementById('confirm-add-members');
 
 // Reply
-const replyPreview  = document.getElementById('reply-preview');
-const replyUsername = document.getElementById('reply-username');
-const replyText     = document.getElementById('reply-text');
-const cancelReplyBtn= document.getElementById('cancel-reply');
+const replyPreview   = document.getElementById('reply-preview');
+const replyUsername  = document.getElementById('reply-username');
+const replyText      = document.getElementById('reply-text');
+const cancelReplyBtn = document.getElementById('cancel-reply');
 
 // Media preview
 const mediaPreviewModal     = document.getElementById('media-preview-modal');
@@ -190,7 +190,7 @@ function clearTitleBadge() {
     document.title = document.title.replace(/^\(\d+\)\s*/, '').replace(/^\(New message\)\s*/, '');
 }
 
-// ── Overlay (exported for webrtc modules) ─────────────────────────────────────
+// ── Overlay ───────────────────────────────────────────────────────────────────
 function showOverlay(msg) {
     if (!statusOverlay || !overlayMessage) return;
     overlayMessage.textContent = msg;
@@ -202,7 +202,7 @@ function hideOverlay() {
 window.showOverlay = showOverlay;
 window.hideOverlay = hideOverlay;
 
-// ── Connection state indicator (subtle — no disruptive overlay) ───────────────
+// ── Connection banner ─────────────────────────────────────────────────────────
 let connBanner = null;
 
 function showConnBanner(msg) {
@@ -230,7 +230,7 @@ function hideConnBanner() {
     setTimeout(() => { if (connBanner) connBanner.style.display = 'none'; }, 350);
 }
 
-// ── Reconnect after navigating back to an active room ────────────────────────
+// ── Rejoin room after reconnect ───────────────────────────────────────────────
 function rejoinRoom() {
     if (currentRoom) {
         socket.emit('join', { room: currentRoom });
@@ -238,22 +238,19 @@ function rejoinRoom() {
     }
 }
 
-// ── Socket — connection lifecycle ─────────────────────────────────────────────
+// ── Socket lifecycle ──────────────────────────────────────────────────────────
 socket.on('connect', () => {
     hideConnBanner();
     socket.emit('user_connected');
     socket.emit('request_statuses');
 
-    // Reload profiles and contact order
     const friendUsernames = Array.from(friendListUl.querySelectorAll('li[data-friend-username]'))
         .map(li => li.dataset.friendUsername);
     if (friendUsernames.length) loadUserProfiles(friendUsernames);
     loadContactsWithTimestamps();
 
-    // Re-join the active room if the page was already showing a chat
     rejoinRoom();
 
-    // Restore from localStorage on first connect
     if (!currentRoom) {
         const storedType = localStorage.getItem('activeRoomType');
         if (storedType === 'group') {
@@ -269,10 +266,7 @@ socket.on('connect', () => {
     }
 });
 
-socket.on('disconnect', (reason) => {
-    // Never show a disruptive modal — just a quiet top banner
-    showConnBanner('Reconnecting…');
-});
+socket.on('disconnect', () => { showConnBanner('Reconnecting…'); });
 
 socket.on('reconnect', () => {
     hideConnBanner();
@@ -282,37 +276,27 @@ socket.on('reconnect', () => {
     rejoinRoom();
 });
 
-socket.on('reconnect_attempt', (n) => {
-    showConnBanner(`Reconnecting… (attempt ${n})`);
-});
+socket.on('reconnect_attempt', (n) => { showConnBanner(`Reconnecting… (attempt ${n})`); });
+socket.on('reconnect_failed',  () => { showConnBanner('Connection lost. Please refresh the page.'); });
 
-socket.on('reconnect_failed', () => {
-    showConnBanner('Connection lost. Please refresh the page.');
-});
-
-// ── Notification helpers ──────────────────────────────────────────────────────
+// ── Notifications ─────────────────────────────────────────────────────────────
 if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
     Notification.requestPermission();
 }
 
 function notify(title, body, tag) {
-    // Always play the message sound — regardless of focus/visibility
     KryonixSounds.playMessage();
-
-    // Desktop notification + title badge only when the page isn't in focus
     if (isPageFocused && isPageVisible) return;
-
     if (Notification.permission === 'granted') {
         const n = new Notification(title, { body, tag, icon: '/static/favicon.ico' });
         n.onclick = () => { window.focus(); n.close(); };
     }
-
     if (!document.title.includes('New message')) {
         document.title = `(New message) ${clearTitleBadge() || document.title}`;
     }
 }
 
-// ── Utility ───────────────────────────────────────────────────────────────────
+// ── Utilities ─────────────────────────────────────────────────────────────────
 function stripHtml(html) {
     const d = document.createElement('div');
     d.innerHTML = html;
@@ -336,8 +320,7 @@ function scrollToMessage(id) {
 // ── Friend-request badge ──────────────────────────────────────────────────────
 function refreshFriendRequestBadge(count) {
     pendingRequestCount = count;
-    const navLinks = document.querySelectorAll('nav a');
-    navLinks.forEach(a => {
+    document.querySelectorAll('nav a').forEach(a => {
         if (a.href.includes('/friends')) {
             let badge = a.querySelector('.fr-badge');
             if (count > 0) {
@@ -360,7 +343,6 @@ function refreshFriendRequestBadge(count) {
     });
 }
 
-// Poll friend-request count every 30 s (lightweight GET, no socket needed)
 async function pollFriendRequests() {
     try {
         const r = await fetch('/get_pending_requests_count');
@@ -371,27 +353,23 @@ async function pollFriendRequests() {
     } catch (_) {}
 }
 
-// ── Real-time socket events for social updates ────────────────────────────────
+// ── Real-time social events ───────────────────────────────────────────────────
 socket.on('friend_request_received', (data) => {
     refreshFriendRequestBadge(data.pending_count);
     notify('Friend Request', `${data.from} sent you a friend request`, 'fr-' + data.from);
 });
 
 socket.on('friend_request_accepted', (data) => {
-    // Add the new friend to the sidebar without a page reload
     addFriendToSidebar(data.username, data.profile_picture);
     notify('New Friend', `${data.username} accepted your friend request`, 'fa-' + data.username);
 });
 
 socket.on('friend_removed', (data) => {
-    // Remove from sidebar in real-time
     const li = friendListUl.querySelector(`li[data-friend-username="${data.username}"]`);
     if (li) li.remove();
-    // If we were chatting with this person, close the chat
     const room = [username, data.username].sort().join('-');
     if (currentRoom === room) {
-        currentRoom = null;
-        window.currentRoom = null;
+        currentRoom = null; window.currentRoom = null;
         chatMessagesDiv.innerHTML = '';
         currentChatHeader.textContent = '';
         if (callIcons) callIcons.style.display = 'none';
@@ -401,14 +379,12 @@ socket.on('friend_removed', (data) => {
 
 socket.on('group_membership_update', (data) => {
     if (data.action === 'added') {
-        // New group we were added to
         addGroupToSidebar(data.group_id, data.group_name);
     } else if (data.action === 'removed') {
         const li = friendListUl.querySelector(`li[data-room-id="${data.group_id}"]`);
         if (li) li.remove();
         if (currentRoom === data.group_id) {
-            currentRoom = null;
-            window.currentRoom = null;
+            currentRoom = null; window.currentRoom = null;
             chatMessagesDiv.innerHTML = '';
             currentChatHeader.textContent = '';
             if (selectChatPrompt) selectChatPrompt.style.display = 'block';
@@ -445,7 +421,6 @@ function addFriendToSidebar(friendName, profilePic) {
         const av = li.querySelector(`#avatar-${friendName}`);
         if (av) av.innerHTML = `<img src="${profilePic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
     }
-    // Remove the "no friends" placeholder if present
     const placeholder = friendListUl.querySelector('.initial-chat-message');
     if (placeholder) placeholder.remove();
 }
@@ -502,7 +477,7 @@ messageInput.addEventListener('input', () => {
     }
 });
 
-// ── Infinite scroll (load older messages) ────────────────────────────────────
+// ── Infinite scroll ───────────────────────────────────────────────────────────
 chatMessagesDiv.addEventListener('scroll', () => {
     const pos = chatMessagesDiv.scrollHeight - chatMessagesDiv.scrollTop - chatMessagesDiv.clientHeight;
     isAtBottom    = pos < 100;
@@ -548,9 +523,11 @@ function doSend() {
 }
 
 sendButton.addEventListener('click', doSend);
-messageInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+messageInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+});
 
-// ── Build a message DOM element ───────────────────────────────────────────────
+// ── Build message element ─────────────────────────────────────────────────────
 function buildMessageEl(msg) {
     const isSelf    = msg.username === username;
     const isDeleted = (msg.msg || '').includes('<em>deleted message</em>');
@@ -559,7 +536,6 @@ function buildMessageEl(msg) {
     div.className = `message ${isSelf ? 'sent' : 'received'}`;
     div.dataset.messageId = msg.id;
 
-    // Avatar
     const av = document.createElement('div');
     av.className = 'message-avatar';
     const prof = userProfiles[msg.username];
@@ -572,7 +548,6 @@ function buildMessageEl(msg) {
         av.textContent = (msg.username || '?')[0].toUpperCase();
     }
 
-    // Content bubble
     const content = document.createElement('div');
     content.className = 'message-content';
 
@@ -583,7 +558,6 @@ function buildMessageEl(msg) {
         content.appendChild(sender);
     }
 
-    // Reply context
     if (msg.reply_to) {
         const ctx = document.createElement('div');
         ctx.className = 'message-reply-context';
@@ -605,7 +579,6 @@ function buildMessageEl(msg) {
     div.appendChild(av);
     div.appendChild(content);
 
-    // Actions
     if (!isDeleted) {
         const actions = document.createElement('div');
         actions.className = 'message-actions';
@@ -663,7 +636,7 @@ function startEdit(id, currentText) {
     if (!el) return;
     const span = el.querySelector('.message-content > span');
     if (!span) return;
-    if (el.querySelector('.message-edit-input')) return; // already editing
+    if (el.querySelector('.message-edit-input')) return;
 
     const clean = currentText.replace(/<em>\(edited\)<\/em>/, '').replace(/<em>deleted message<\/em>/, '').trim();
     const input = document.createElement('input');
@@ -717,7 +690,6 @@ async function loadChatHistory(roomName) {
         const resp = await fetch(`/history/${encodeURIComponent(roomName)}?offset=0&limit=50`);
         const data = await resp.json();
 
-        // Guard: room changed while we were fetching
         if (currentRoom !== roomName) { isLoadingHistory = false; return; }
 
         chatMessagesDiv.innerHTML = '';
@@ -818,7 +790,6 @@ async function loadContactsWithTimestamps() {
             return (map[bId]?.last_message_timestamp || 0) - (map[aId]?.last_message_timestamp || 0);
         });
 
-        // Clear unread badges before re-appending
         items.forEach(item => {
             const id = item.dataset.roomId || item.dataset.friendUsername;
             const badge = item.querySelector('.unread-indicator');
@@ -853,7 +824,6 @@ function setCallVisibility(roomType) {
 }
 
 function selectRoom(roomId, roomType, roomName, targetLi = null) {
-    // Clear unread badge
     if (targetLi) {
         targetLi.querySelector('.unread-indicator')?.remove();
         const stored = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
@@ -879,7 +849,9 @@ function selectRoom(roomId, roomType, roomName, targetLi = null) {
     setCallVisibility(roomType);
     cancelReply();
 
-    const displayName = roomType === 'group' ? roomName : roomId.replace(username + '-', '').replace('-' + username, '');
+    const displayName = roomType === 'group'
+        ? roomName
+        : roomId.replace(username + '-', '').replace('-' + username, '');
     currentChatHeader.textContent = displayName;
     if (mobileChatTitle) mobileChatTitle.textContent = displayName;
 
@@ -898,7 +870,6 @@ function selectFriend(friendUsername, targetLi = null) {
         targetLi || friendListUl.querySelector(`li[data-friend-username="${friendUsername}"]`));
 }
 
-// Sidebar click delegation
 friendListUl.addEventListener('click', e => {
     const li = e.target.closest('li[data-friend-username], li[data-room-id]');
     if (!li) return;
@@ -916,7 +887,7 @@ friendListUl.addEventListener('click', e => {
     }
 });
 
-// ── Socket: incoming messages ─────────────────────────────────────────────────
+// ── Socket: messages ──────────────────────────────────────────────────────────
 socket.on('message', data => {
     if (!userProfiles[data.username]) loadUserProfiles([data.username]);
 
@@ -925,7 +896,6 @@ socket.on('message', data => {
         if (isAtBottom) scrollToBottom();
         if (data.username !== username) notify(`${data.username}`, stripHtml(data.msg).substring(0, 80), data.room);
     } else if (data.username !== username) {
-        // Background chat — update badge + preview
         let li = data.room.startsWith('group_')
             ? friendListUl.querySelector(`li[data-room-id="${data.room}"]`)
             : friendListUl.querySelector(`li[data-friend-username="${data.room.replace(username + '-', '').replace('-' + username, '')}"]`);
@@ -961,18 +931,16 @@ socket.on('message', data => {
     }
 });
 
-// ── Socket: message edits / deletes ──────────────────────────────────────────
 socket.on('message_updated', data => {
     if (data.room !== currentRoom) return;
     let text = data.new_text;
-    // Don't double-append "(edited)"
     if (!text.includes('<em>deleted message</em>') && !text.includes('<em>(edited)</em>')) {
         text += ' <em>(edited)</em>';
     }
     updateMessage(data.id, text);
 });
 
-// ── Socket: typing indicator ──────────────────────────────────────────────────
+// ── Socket: typing ────────────────────────────────────────────────────────────
 socket.on('user_typing', data => {
     const existing = document.getElementById('typing-indicator');
     if (data.is_typing) {
@@ -989,10 +957,10 @@ socket.on('user_typing', data => {
     }
 });
 
-// ── Socket: online/offline status ────────────────────────────────────────────
+// ── Socket: status ────────────────────────────────────────────────────────────
 socket.on('user_status_update', data => {
     const dot = document.querySelector(`.status-indicator[data-username="${data.username}"]`);
-    if (dot) { dot.className = 'status-indicator ' + (data.status || 'offline'); }
+    if (dot) dot.className = 'status-indicator ' + (data.status || 'offline');
 });
 
 socket.on('all_statuses', data => {
@@ -1002,7 +970,7 @@ socket.on('all_statuses', data => {
     });
 });
 
-// ── Socket: error handling ────────────────────────────────────────────────────
+// ── Socket: errors ────────────────────────────────────────────────────────────
 socket.on('error', data => {
     const msg = data.message || '';
     if (msg.includes('not friends') || msg.includes('blocked') || msg.includes('not a member')) {
@@ -1012,15 +980,10 @@ socket.on('error', data => {
         setCallVisibility(null);
         if (selectChatPrompt) selectChatPrompt.style.display = 'block';
     } else {
-        // Non-fatal — show briefly then auto-hide after 4 s
         showOverlay(msg);
         setTimeout(hideOverlay, 4000);
     }
 });
-
-// ── Socket: calling sound hooks ───────────────────────────────────────────────
-// Ringtone is managed directly in chat-webrtc.js and chat-group-webrtc.js
-// via window.KryonixSounds.playCalling() / stopCalling().
 
 // ── Group management ──────────────────────────────────────────────────────────
 createGroupBtn?.addEventListener('click', () => {
@@ -1032,7 +995,7 @@ createGroupBtn?.addEventListener('click', () => {
     document.querySelectorAll('#member-selection input[type="checkbox"]').forEach(cb => { cb.checked = false; });
 });
 
-cancelGroupBtn?.addEventListener('click',     () => groupModal?.classList.remove('active'));
+cancelGroupBtn?.addEventListener('click', () => groupModal?.classList.remove('active'));
 cancelEditGroupBtn?.addEventListener('click', () => {
     groupModal?.classList.remove('active');
     if (addMembersSection) addMembersSection.style.display = 'none';
@@ -1041,8 +1004,8 @@ cancelEditGroupBtn?.addEventListener('click', () => {
 createGroupSubmit?.addEventListener('click', async () => {
     const name    = groupNameInput?.value.trim();
     const members = Array.from(document.querySelectorAll('#member-selection input:checked')).map(c => c.value);
-    if (!name)             { showOverlay('Enter a group name.'); return; }
-    if (!members.length)   { showOverlay('Select at least 1 member.'); return; }
+    if (!name)           { showOverlay('Enter a group name.'); return; }
+    if (!members.length) { showOverlay('Select at least 1 member.'); return; }
 
     const r = await fetch('/create_group', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1057,7 +1020,6 @@ createGroupSubmit?.addEventListener('click', async () => {
     setTimeout(hideOverlay, 2500);
 });
 
-// Edit group
 editGroupBtn?.addEventListener('click', async () => {
     if (!currentRoom?.startsWith('group_')) return;
     const r = await fetch(`/get_group_info/${currentRoom}`);
@@ -1098,7 +1060,7 @@ editGroupBtn?.addEventListener('click', async () => {
     }
 
     if (showAddMembersBtn) showAddMembersBtn.style.display = data.is_creator ? 'inline-flex' : 'none';
-    if (leaveGroupBtn)     leaveGroupBtn.style.display     = data.is_creator ? 'none' : 'inline-flex';
+    if (leaveGroupBtn)     leaveGroupBtn.style.display     = data.is_creator ? 'none'        : 'inline-flex';
     groupModal?.classList.add('active');
 });
 
@@ -1210,12 +1172,12 @@ sendMediaBtn?.addEventListener('click', async () => {
         const d = await r.json();
         if (d.error) { showOverlay('Upload failed: ' + d.error); return; }
         if (d.url) {
-            const ext  = (pendingMediaFile.name || '').split('.').pop().toLowerCase();
+            const ext   = (pendingMediaFile.name || '').split('.').pop().toLowerCase();
             const isImg = pendingMediaFile.type.startsWith('image/') || ['png','jpg','jpeg','gif','webp'].includes(ext);
             const isVid = pendingMediaFile.type.startsWith('video/') || ['mp4','webm','ogg','mov'].includes(ext);
-            const msg = isImg ? `<a href="${d.url}" target="_blank"><img src="${d.url}" class="message-file image" alt="image"></a>`
-                      : isVid ? `<video controls src="${d.url}" class="message-file video"></video>`
-                      : `<a href="${d.url}" target="_blank">${pendingMediaFile.name || 'file'}</a>`;
+            const msg   = isImg ? `<a href="${d.url}" target="_blank"><img src="${d.url}" class="message-file image" alt="image"></a>`
+                        : isVid ? `<video controls src="${d.url}" class="message-file video"></video>`
+                        : `<a href="${d.url}" target="_blank">${pendingMediaFile.name || 'file'}</a>`;
             const payload = { room: currentRoom, msg };
             if (replyingTo) payload.reply_to = replyingTo;
             socket.emit('send_message', payload);
@@ -1246,11 +1208,14 @@ messageInput?.addEventListener('focus', () => {
 });
 messageInput?.addEventListener('blur', () => {
     if (window.innerWidth <= 768) {
-        setTimeout(() => { if (!aboutToSend && chatArea) chatArea.style.paddingBottom = '0'; aboutToSend = false; }, 300);
+        setTimeout(() => {
+            if (!aboutToSend && chatArea) chatArea.style.paddingBottom = '0';
+            aboutToSend = false;
+        }, 300);
     }
 });
 
-// ── Bootstrap: poll friend requests + initial load ────────────────────────────
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     pollFriendRequests();
     setInterval(pollFriendRequests, 30_000);

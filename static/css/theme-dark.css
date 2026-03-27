@@ -1,0 +1,374 @@
+/* ============================================================
+   KRYONIX THEME: Dark
+   Pure black/charcoal palette. No blue anywhere — white accents,
+   subtle silver text, deep graphite surfaces.
+   ============================================================ */
+
+:root {
+    --primary:        #e2e2e2;
+    --primary-dark:   #c0c0c0;
+    --secondary:      #555555;
+    --light:          #f0f0f0;
+    --dark:           #111111;
+    --darker:         #0a0a0a;
+    --gray:           #888888;
+    --light-gray:     #1c1c1c;
+    --border:         #2e2e2e;
+    --success:        #6fcf97;
+    --danger:         #eb5757;
+    --message-bg:     rgba(10, 10, 10, 0.85);
+    --sent-bg:        rgba(50, 50, 50, 0.9);
+    --received-bg:    rgba(22, 22, 22, 0.95);
+
+    /* Transition overlay */
+    --pto-bg:     #0a0a0a;
+    --pto-accent: #e2e2e2;
+    --pto-text:   #f0f0f0;
+}
+
+/* ── Body ──────────────────────────────────────────────────── */
+body {
+    background: #0d0d0d !important;
+    background-image: none !important;
+    animation: none !important;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────── */
+.sidebar {
+    background: rgba(10, 10, 10, 0.97) !important;
+    border-right: 1px solid #2a2a2a !important;
+}
+
+.friends-list h3 { color: #666 !important; }
+.user-info { border-bottom-color: #2a2a2a !important; }
+.username { color: #f0f0f0 !important; }
+nav { border-bottom-color: #2a2a2a !important; }
+
+nav a { color: #c0c0c0 !important; }
+nav a:hover,
+nav a:focus {
+    background: #1c1c1c !important;
+    color: #f0f0f0 !important;
+}
+
+#friend-list-ul li { color: #c0c0c0 !important; }
+#friend-list-ul li:hover,
+#friend-list-ul li.active { background: #1c1c1c !important; }
+
+.last-message-preview { color: #666 !important; }
+.logout-button { background: #eb5757 !important; border-top-color: #2a2a2a !important; }
+.logout-button:hover { background: #d44 !important; }
+
+/* ── Search ────────────────────────────────────────────────── */
+.search-container { border-bottom-color: #2a2a2a !important; }
+.search-input {
+    background: #161616 !important;
+    border-color: #2a2a2a !important;
+    color: #f0f0f0 !important;
+}
+.search-input::placeholder { color: #555 !important; }
+.search-input:focus { border-color: #888 !important; }
+
+/* ── Create group button ───────────────────────────────────── */
+.create-group-btn {
+    background: #1c1c1c !important;
+    color: #e2e2e2 !important;
+    border: 1px solid #2e2e2e !important;
+}
+.create-group-btn:hover {
+    background: #252525 !important;
+    color: #fff !important;
+}
+
+/* ── Mobile header ─────────────────────────────────────────── */
+.mobile-header {
+    background: rgba(10, 10, 10, 0.97) !important;
+    border-bottom: 1px solid #2a2a2a !important;
+}
+#mobile-chat-title { color: #f0f0f0 !important; }
+.menu-toggle { color: #c0c0c0 !important; }
+.close-button { color: #666 !important; }
+
+/* ── Chat header ───────────────────────────────────────────── */
+.chat-header {
+    background: rgba(10, 10, 10, 0.97) !important;
+    border-bottom: 1px solid #2a2a2a !important;
+    box-shadow: 0 1px 0 #2a2a2a !important;
+}
+.chat-header h2 { color: #f0f0f0 !important; }
+.call-icon-btn {
+    background: #1c1c1c !important;
+    color: #c0c0c0 !important;
+}
+.call-icon-btn:hover { background: #2a2a2a !important; color: #fff !important; }
+
+/* ── Messages ──────────────────────────────────────────────── */
+.chat-messages {
+    background: #0d0d0d !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.message.sent .message-content {
+    background: #1e1e1e !important;
+    border: 1px solid #2e2e2e !important;
+    color: #f0f0f0 !important;
+}
+.message.received .message-content {
+    background: #161616 !important;
+    border: 1px solid #2a2a2a !important;
+    color: #e2e2e2 !important;
+}
+
+.message-content span { color: inherit !important; }
+.message-sender { color: #c0c0c0 !important; font-weight: 600 !important; }
+.message-time   { color: #555 !important; }
+.initial-chat-message { color: #555 !important; }
+
+/* Message actions */
+.message-actions button {
+    background: rgba(255,255,255,0.06) !important;
+    color: #999 !important;
+    border: none !important;
+}
+.message-actions button:hover {
+    background: rgba(255,255,255,0.12) !important;
+    color: #f0f0f0 !important;
+}
+.message-actions button.reply-btn {
+    background: rgba(200,200,200,0.08) !important;
+    color: #bbb !important;
+}
+.message-actions button.reply-btn:hover {
+    background: rgba(200,200,200,0.16) !important;
+}
+
+/* ── Input area ────────────────────────────────────────────── */
+.chat-input-area {
+    background: rgba(10, 10, 10, 0.97) !important;
+    border-top: 1px solid #2a2a2a !important;
+}
+#message-input {
+    background: #161616 !important;
+    border-color: #2e2e2e !important;
+    color: #f0f0f0 !important;
+}
+#message-input::placeholder { color: #555 !important; }
+#message-input:focus {
+    border-color: #666 !important;
+    box-shadow: 0 0 0 2px rgba(200,200,200,0.08) !important;
+}
+.chat-input-area label { color: #666 !important; }
+.chat-input-area label:hover { color: #c0c0c0 !important; }
+
+#send-button { background: #2a2a2a !important; color: #e2e2e2 !important; }
+#send-button:hover { background: #3a3a3a !important; }
+
+/* ── Char counter ──────────────────────────────────────────── */
+.char-counter {
+    background: #161616 !important;
+    color: #666 !important;
+}
+
+/* ── Badges ────────────────────────────────────────────────── */
+.group-indicator,
+.unread-indicator,
+.creator-badge {
+    background: #333 !important;
+    color: #e2e2e2 !important;
+}
+
+/* ── Status overlay ────────────────────────────────────────── */
+#status-overlay { background: rgba(0,0,0,0.88) !important; }
+#overlay-message {
+    background: #111 !important;
+    color: #e2e2e2 !important;
+    border-color: #2a2a2a !important;
+}
+#status-overlay button { background: #2a2a2a !important; color: #e2e2e2 !important; }
+
+/* ── System messages ───────────────────────────────────────── */
+.system-message {
+    background: rgba(255,255,255,0.04) !important;
+    border-color: #2a2a2a !important;
+    color: #888 !important;
+}
+
+/* ── Typing indicator ──────────────────────────────────────── */
+.typing-indicator {
+    background: #1a1a1a !important;
+    color: #777 !important;
+}
+
+/* ── Reply preview ─────────────────────────────────────────── */
+.reply-preview {
+    background: rgba(255,255,255,0.04) !important;
+    border-left-color: #666 !important;
+    border-color: rgba(255,255,255,0.08) !important;
+}
+.reply-preview-username,
+.message-reply-username { color: #c0c0c0 !important; text-shadow: none !important; }
+.reply-preview-text,
+.message-reply-text { color: #666 !important; }
+.message-reply-context {
+    background: rgba(255,255,255,0.03) !important;
+    border-left-color: #555 !important;
+    border-color: rgba(255,255,255,0.06) !important;
+}
+.message-reply-context:hover {
+    background: rgba(255,255,255,0.06) !important;
+    border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* ── Auth pages ────────────────────────────────────────────── */
+.auth-container {
+    background: rgba(10,10,10,0.95) !important;
+    border-color: #2a2a2a !important;
+}
+.auth-container h2 { color: #f0f0f0 !important; }
+.auth-container input[type="text"],
+.auth-container input[type="password"] {
+    background: #161616 !important;
+    border-color: #2a2a2a !important;
+    color: #f0f0f0 !important;
+}
+.auth-container input::placeholder { color: #555 !important; }
+.auth-container input:focus { border-color: #666 !important; }
+.auth-container button { background: #2a2a2a !important; color: #e2e2e2 !important; }
+.auth-container button:hover { background: #3a3a3a !important; }
+.auth-container p { color: #666 !important; }
+.auth-container a { color: #c0c0c0 !important; }
+.auth-container a:hover { color: #fff !important; }
+
+/* ── Settings / Friends / Admin panels ────────────────────── */
+.mobile-panel {
+    background: rgba(10,10,10,0.97) !important;
+    border-color: #2a2a2a !important;
+}
+.mobile-page-header {
+    background: rgba(10,10,10,0.97) !important;
+    border-bottom-color: #2a2a2a !important;
+}
+.page-title { color: #f0f0f0 !important; }
+.back-button { color: #c0c0c0 !important; border-color: #2a2a2a !important; }
+.back-button:hover { background: #1c1c1c !important; color: #fff !important; }
+
+.section { border-bottom-color: #2a2a2a !important; }
+.section h3 { color: #c0c0c0 !important; }
+.section-desc { color: #555 !important; }
+
+.settings-form label,
+.form-group label { color: #c0c0c0 !important; }
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.group-form input[type="text"] {
+    background: #161616 !important;
+    border-color: #2a2a2a !important;
+    color: #f0f0f0 !important;
+}
+.form-group input:focus,
+.group-form input:focus {
+    border-color: #666 !important;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.05) !important;
+}
+.form-group small { color: #555 !important; }
+
+.button { background: #2a2a2a !important; color: #e2e2e2 !important; }
+.button:hover { background: #3a3a3a !important; }
+.logout-button.button,
+.remove-pic-btn,
+.leave-group-btn,
+.kick-btn { background: #eb5757 !important; color: #fff !important; }
+.logout-button.button:hover,
+.remove-pic-btn:hover:not(:disabled) { background: #d44 !important; }
+
+/* ── Profile picture section ───────────────────────────────── */
+.current-profile-pic {
+    border-color: #2a2a2a !important;
+    background: #161616 !important;
+}
+.default-avatar { background: #2a2a2a !important; color: #c0c0c0 !important; }
+.sound-current { color: #c0c0c0 !important; }
+
+/* ── Group modal ───────────────────────────────────────────── */
+.group-modal { background: rgba(0,0,0,0.85) !important; }
+.group-modal-content {
+    background: #111 !important;
+    border-color: #2a2a2a !important;
+}
+.group-modal-content h3 { color: #f0f0f0 !important; }
+.member-checkbox:hover { background: #1c1c1c !important; }
+.member-checkbox label { color: #c0c0c0 !important; }
+.member-checkbox input[type="checkbox"] { accent-color: #c0c0c0; }
+.group-member-item { background: #1a1a1a !important; }
+.member-info span { color: #e2e2e2 !important; }
+.add-members-section { border-top-color: #2a2a2a !important; }
+.create-group-submit,
+.add-member-btn,
+.show-add-members-btn {
+    background: #2a2a2a !important;
+    color: #e2e2e2 !important;
+}
+.create-group-submit:hover,
+.add-member-btn:hover { background: #3a3a3a !important; }
+.cancel-group-btn { background: #1c1c1c !important; color: #999 !important; }
+
+/* ── Media preview modal ───────────────────────────────────── */
+.media-preview-modal { background: rgba(0,0,0,0.96) !important; }
+.media-preview-content {
+    background: #111 !important;
+    border: 1px solid #2a2a2a;
+}
+.send-media-btn { background: #6fcf97 !important; color: #0a0a0a !important; }
+.cancel-media-btn { background: #eb5757 !important; color: #fff !important; }
+
+/* ── Call modals ───────────────────────────────────────────── */
+.call-modal { background: rgba(0,0,0,0.96) !important; }
+.call-content { background: #0d0d0d !important; }
+.call-header h3 { color: #f0f0f0 !important; }
+#call-status, #group-call-status { color: #666 !important; }
+.call-button.mute { background: #1c1c1c !important; color: #c0c0c0 !important; }
+.call-button.mute.active { background: #eb5757 !important; }
+.call-button.end { background: #eb5757 !important; }
+.minimize-call-btn { background: #1c1c1c !important; color: #c0c0c0 !important; }
+.settings-call-btn { background: #1c1c1c !important; color: #c0c0c0 !important; }
+
+.incoming-call-modal,
+.device-settings-modal {
+    background: #111 !important;
+    border-color: #2a2a2a !important;
+}
+.incoming-call-modal h3 { color: #f0f0f0 !important; }
+.incoming-call-modal p { color: #888 !important; }
+.answer-button { background: #6fcf97 !important; color: #0a0a0a !important; }
+.reject-button { background: #eb5757 !important; color: #fff !important; }
+
+.device-setting label { color: #888 !important; }
+.device-setting select {
+    background: #1a1a1a !important;
+    color: #e2e2e2 !important;
+    border-color: #2a2a2a !important;
+}
+.save-settings-btn { background: #2a2a2a !important; color: #e2e2e2 !important; }
+.cancel-settings-btn { background: #1a1a1a !important; color: #999 !important; }
+
+/* ── Friends page ──────────────────────────────────────────── */
+.friends-message-container.success { background: rgba(111,207,151,0.15) !important; color: #6fcf97 !important; }
+.friends-message-container.error   { background: rgba(235,87,87,0.15)   !important; color: #eb5757 !important; }
+.friends-section ul li { border-bottom-color: #2a2a2a !important; }
+.friends-section ul li span { color: #c0c0c0 !important; }
+.friends-small-button.unblock { background: #2a2a2a !important; color: #e2e2e2 !important; }
+.friends-small-button.unblock:hover { background: #3a3a3a !important; }
+
+/* ── Conn banner ───────────────────────────────────────────── */
+#conn-banner { background: rgba(0,0,0,0.85) !important; color: #aaa !important; }
+
+/* ── Theme picker cards ────────────────────────────────────── */
+.theme-card { background: #1a1a1a !important; border-color: #2a2a2a !important; }
+.theme-card:hover { border-color: #666 !important; }
+.theme-card.active { border-color: #c0c0c0 !important; box-shadow: 0 0 0 3px rgba(200,200,200,0.1) !important; }
+.theme-check { background: #c0c0c0 !important; color: #0a0a0a !important; }
+.theme-name { color: #e2e2e2 !important; }
+.theme-desc { color: #555 !important; }
+.custom-css-panel { background: #161616 !important; border-color: #2a2a2a !important; }

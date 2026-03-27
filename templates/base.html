@@ -5,153 +5,162 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Kryonix{% endblock %}</title>
 
-    {# FIX: Removed trailing whitespace from CDN URL that caused a 404 on every page load #}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
+    {# Active theme stylesheet — populated by _load_theme_into_session() in app.py #}
+    {% if session.get('custom_css_url') %}
+    <link rel="stylesheet" href="{{ session['custom_css_url'] | e }}" id="user-custom-css">
+    {% endif %}
+
     <style>
-        /* Dynamic theme colours injected from session */
+        /* ── CSS variables injected from session ──────────────────────────── */
         :root {
             --primary-color: {{ session.get('primary_color', '#0f0f0f') | e }};
             --accent-color:  {{ session.get('accent_color',  '#ff3f81') | e }};
+
+            /* Transition overlay accent — overridden per-theme via their CSS */
+            --pto-bg:     #09090f;
+            --pto-accent: #4cc9f0;
+            --pto-text:   #ffffff;
         }
 
-        /* ── Page Transition Overlay ──────────────────────────────────────────── */
+        /* ── Page Transition Overlay ──────────────────────────────────────── */
+        /*
+         * Clean, minimal black fade.
+         * - Loads out in 350 ms (fast, not jarring).
+         * - Navigates in at 280 ms so the user sees it briefly then lands.
+         * - iOS-safe: pointer-events disabled immediately via JS, before
+         *   the CSS opacity transition starts, so the overlay never eats taps.
+         * - Theme-aware: each theme overrides --pto-bg / --pto-accent / --pto-text.
+         */
         #page-transition-overlay {
             position: fixed;
             inset: 0;
-            background: radial-gradient(circle at center, #1a0a3c 0%, #0f0a2e 40%, #0d0d1a 100%);
             z-index: 9999;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 20px;
+            background: var(--pto-bg);
+            pointer-events: auto;
             opacity: 1;
             visibility: visible;
-            /* FIX: visibility delay matches opacity so it isn't immediately hidden */
-            transition: opacity 1.5s cubic-bezier(0.23, 1, 0.32, 1),
-                        visibility 0s linear 1.5s;
-            animation: pulseGlow 4s ease-in-out infinite;
+            /* Fade-out on load */
+            transition:
+                opacity    0.35s ease,
+                visibility 0s   linear 0.35s;
         }
 
         #page-transition-overlay.inactive {
             opacity: 0;
             visibility: hidden;
-            pointer-events: none;
+            pointer-events: none; /* immediate — no delay, fixes iOS tap issue */
         }
 
-        #page-transition-overlay .logo {
-            color: white;
-            font-size: 4rem;
-            font-weight: bold;
+        /* Wordmark */
+        .pto-logo {
+            font-size: clamp(1.6rem, 4.5vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: 0.22em;
             text-transform: uppercase;
-            letter-spacing: 6px;
+            color: var(--pto-text);
             opacity: 0;
-            transform: scale(0.5) rotateX(90deg);
-            transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            text-shadow: 0 0 15px rgba(128, 0, 255, 0.7);
+            transform: translateY(8px);
+            transition:
+                opacity   0.3s ease 0.06s,
+                transform 0.3s ease 0.06s;
         }
 
-        #page-transition-overlay .logo::before {
-            content: attr(data-text);
-            position: absolute;
-            inset: 0;
-            color: transparent;
-            background: linear-gradient(90deg, #8a2be2, #4b0082, #0000ff, #1e90ff);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-size: 300% 300%;
-            animation: shine 3s infinite;
-            z-index: -1;
-            filter: blur(1px);
-            opacity: 0.7;
+        /* Animated accent bar */
+        .pto-bar {
+            width: 36px;
+            height: 2px;
+            border-radius: 2px;
+            background: var(--pto-accent);
+            opacity: 0;
+            transform: scaleX(0);
+            transform-origin: center;
+            transition:
+                opacity   0.25s ease 0.15s,
+                transform 0.3s  ease 0.15s;
         }
 
-        #page-transition-overlay:not(.inactive) .logo {
+        /* Animate in when overlay is active (not .inactive) */
+        #page-transition-overlay:not(.inactive) .pto-logo {
             opacity: 1;
-            transform: scale(1) rotateX(0);
-            transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
+            transform: translateY(0);
         }
-
-        @keyframes pulseGlow {
-            0%   { box-shadow: inset 0 0  50px rgba(75,  0, 130, 0.5); }
-            50%  { box-shadow: inset 0 0 100px rgba(128, 0, 255, 0.7); }
-            100% { box-shadow: inset 0 0  50px rgba(75,  0, 130, 0.5); }
+        #page-transition-overlay:not(.inactive) .pto-bar {
+            opacity: 1;
+            transform: scaleX(1);
         }
-
-        @keyframes shine {
-            0%   { background-position: 0%   50%; }
-            50%  { background-position: 100% 50%; }
-            100% { background-position: 0%   50%; }
-        }
-        /* ── End Page Transition Overlay ────────────────────────────────────── */
+        /* ── End Page Transition Overlay ──────────────────────────────────── */
     </style>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block head %}{% endblock %}
+    {# Pages that need socket.io set this block #}
+    {% block socketio %}{% endblock %}
 </head>
 <body>
-    <div id="page-transition-overlay" role="presentation" aria-hidden="true">
-        <div class="logo" data-text="KRYONIX">KRYONIX</div>
-    </div>
 
-    {% block content %}{% endblock %}
+<div id="page-transition-overlay" role="presentation" aria-hidden="true">
+    <span class="pto-logo">Kryonix</span>
+    <span class="pto-bar"></span>
+</div>
 
-    <script>
-    // ── Page Transition Script ──────────────────────────────────────────────────
-    (function () {
-        'use strict';
+{% block content %}{% endblock %}
 
-        var overlay = document.getElementById('page-transition-overlay');
+<script>
+// ── Page Transition ────────────────────────────────────────────────────────
+(function () {
+    'use strict';
 
-        // Fade out the overlay when the page has loaded
-        requestAnimationFrame(function () {
-            setTimeout(function () {
-                overlay.classList.add('inactive');
-            }, 10);
-        });
+    var overlay = document.getElementById('page-transition-overlay');
 
-        // Intercept link clicks and show the overlay before navigating
-        document.body.addEventListener('click', function (e) {
-            var link = e.target.closest('a');
-            if (!link) return;
+    // Fade the overlay out immediately on page load.
+    // pointer-events is set to none BEFORE the CSS transition fires —
+    // this is the fix for iOS Safari blocking the hamburger menu tap.
+    requestAnimationFrame(function () {
+        overlay.style.pointerEvents = 'none';
+        overlay.classList.add('inactive');
+    });
 
-            var href = link.getAttribute('href');
+    // Intercept navigation clicks and show the overlay before leaving
+    document.body.addEventListener('click', function (e) {
+        var link = e.target.closest('a');
+        if (!link) return;
 
-            // FIX: Don't intercept links that shouldn't trigger a full-page transition:
-            //   • missing or empty href
-            //   • opens in a new tab / window  (_blank, _top, …)
-            //   • download links
-            //   • pure hash anchors  (#section)
-            //   • mailto:, tel:, javascript: pseudo-protocols
-            //   • links opted-out via data-no-transition attribute
-            if (
-                !href ||
-                link.target ||
-                link.hasAttribute('download') ||
-                href.charAt(0) === '#' ||
-                href.indexOf('mailto:') === 0 ||
-                href.indexOf('tel:') === 0 ||
-                href.indexOf('javascript:') === 0 ||
-                link.hasAttribute('data-no-transition')
-            ) {
-                return;
-            }
+        var href = link.getAttribute('href');
 
-            e.preventDefault();
-            overlay.classList.remove('inactive');
+        // Skip: empty, new-tab, download, hash, protocol links, opted-out
+        if (
+            !href ||
+            link.target ||
+            link.hasAttribute('download') ||
+            href.charAt(0) === '#' ||
+            href.indexOf('mailto:')     === 0 ||
+            href.indexOf('tel:')        === 0 ||
+            href.indexOf('javascript:') === 0 ||
+            link.hasAttribute('data-no-transition')
+        ) {
+            return;
+        }
 
-            // FIX: Reduced delay to 1800ms (was 2700ms) to match the actual
-            // animation duration so users aren't staring at a finished animation
-            setTimeout(function () {
-                window.location.href = link.href;
-            }, 1800);
-        });
-    }());
-    // ── End Page Transition Script ──────────────────────────────────────────────
-    </script>
+        e.preventDefault();
+        overlay.style.pointerEvents = 'auto';
+        overlay.classList.remove('inactive');
 
-    {% block scripts %}{% endblock %}
+        // Navigate after the fade-in animation (~280 ms)
+        setTimeout(function () {
+            window.location.href = link.href;
+        }, 300);
+    });
+}());
+// ── End Page Transition ────────────────────────────────────────────────────
+</script>
+
+{% block scripts %}{% endblock %}
 </body>
 </html>

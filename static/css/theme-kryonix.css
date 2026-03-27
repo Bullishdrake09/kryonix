@@ -1,0 +1,15 @@
+/* ============================================================
+   KRYONIX THEME: Kryonix (Default)
+   The original deep-space aesthetic — animated purple gradient,
+   electric cyan accents, glassmorphism panels.
+
+   This file only needs to set the transition overlay variables
+   so the page-turn animation matches the theme. All other
+   values are already defined in style.css.
+   ============================================================ */
+
+:root {
+    --pto-bg:     #0d0d1a;
+    --pto-accent: #4cc9f0;
+    --pto-text:   #ffffff;
+}

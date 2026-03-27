@@ -6,9 +6,13 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
 {% endblock %}
 
+{% block socketio %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <!-- Notification sound -->
-<audio id="notification-sound" src="{{ url_for('static', filename='message.mp3') }}" preload="auto"></audio>
+<audio id="notification-sound" src="{{ url_for('static', filename='sounds/message.mp3') }}" preload="auto"></audio>
 
 <!-- Mobile header -->
 <div class="mobile-header" id="mobile-header">

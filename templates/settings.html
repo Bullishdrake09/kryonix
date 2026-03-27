@@ -54,6 +54,137 @@
             <p id="pic-upload-status" style="margin-top:12px;font-size:.875rem;color:var(--gray);display:none;"></p>
         </div>
 
+        <!-- ── Appearance ────────────────────────────────────────── -->
+        <div class="section">
+            <h3><i class="fas fa-palette"></i> Appearance</h3>
+            <p class="section-desc">Choose a built-in theme or upload your own CSS file.</p>
+
+            <!-- Theme picker -->
+            <div class="theme-grid" id="theme-grid">
+
+                <!-- Kryonix (default) -->
+                <button class="theme-card {% if not session.get('active_theme') or session.get('active_theme') == 'kryonix' %}active{% endif %}"
+                        data-theme="kryonix" type="button" aria-label="Kryonix theme">
+                    <div class="theme-preview kryonix-preview">
+                        <div class="tp-sidebar"></div>
+                        <div class="tp-chat">
+                            <div class="tp-bubble tp-sent"></div>
+                            <div class="tp-bubble tp-recv"></div>
+                            <div class="tp-bubble tp-sent"></div>
+                        </div>
+                    </div>
+                    <div class="theme-label">
+                        <span class="theme-name">Kryonix</span>
+                        <span class="theme-desc">Default — deep space</span>
+                    </div>
+                    <div class="theme-check"><i class="fas fa-check"></i></div>
+                </button>
+
+                <!-- Dark -->
+                <button class="theme-card {% if session.get('active_theme') == 'dark' %}active{% endif %}"
+                        data-theme="dark" type="button" aria-label="Dark theme">
+                    <div class="theme-preview dark-preview">
+                        <div class="tp-sidebar"></div>
+                        <div class="tp-chat">
+                            <div class="tp-bubble tp-sent"></div>
+                            <div class="tp-bubble tp-recv"></div>
+                            <div class="tp-bubble tp-sent"></div>
+                        </div>
+                    </div>
+                    <div class="theme-label">
+                        <span class="theme-name">Dark</span>
+                        <span class="theme-desc">Charcoal &amp; blue</span>
+                    </div>
+                    <div class="theme-check"><i class="fas fa-check"></i></div>
+                </button>
+
+                <!-- Light -->
+                <button class="theme-card {% if session.get('active_theme') == 'light' %}active{% endif %}"
+                        data-theme="light" type="button" aria-label="Light theme">
+                    <div class="theme-preview light-preview">
+                        <div class="tp-sidebar"></div>
+                        <div class="tp-chat">
+                            <div class="tp-bubble tp-sent"></div>
+                            <div class="tp-bubble tp-recv"></div>
+                            <div class="tp-bubble tp-sent"></div>
+                        </div>
+                    </div>
+                    <div class="theme-label">
+                        <span class="theme-name">Light</span>
+                        <span class="theme-desc">Clean &amp; airy</span>
+                    </div>
+                    <div class="theme-check"><i class="fas fa-check"></i></div>
+                </button>
+
+                <!-- Custom -->
+                <button class="theme-card {% if session.get('active_theme') == 'custom' %}active{% endif %}"
+                        data-theme="custom" type="button" aria-label="Custom CSS theme" id="custom-theme-card">
+                    <div class="theme-preview custom-preview">
+                        <div class="tp-custom-icon">
+                            <i class="fas fa-code"></i>
+                        </div>
+                    </div>
+                    <div class="theme-label">
+                        <span class="theme-name">Custom CSS</span>
+                        <span class="theme-desc">
+                            {% if user_data.get('custom_css_url') %}
+                                <span style="color:var(--success);">
+                                    <i class="fas fa-check-circle"></i> Active
+                                </span>
+                            {% else %}
+                                Upload your own
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="theme-check"><i class="fas fa-check"></i></div>
+                </button>
+
+            </div>
+
+            <!-- Custom CSS upload panel (hidden unless custom is selected) -->
+            <div class="custom-css-panel" id="custom-css-panel"
+                 style="display:{% if session.get('active_theme') == 'custom' %}block{% else %}none{% endif %};">
+                <div class="sound-row" style="margin-top:16px;">
+                    <div class="sound-current" id="css-file-label">
+                        {% if user_data.get('custom_css_url') %}
+                            <i class="fas fa-check-circle" style="color:var(--success);"></i>
+                            Custom stylesheet active
+                        {% else %}
+                            <i class="fas fa-file-code" style="opacity:.4;"></i>
+                            No custom stylesheet uploaded
+                        {% endif %}
+                    </div>
+                    <div class="sound-actions">
+                        {% if user_data.get('custom_css_url') %}
+                        <a class="button" href="{{ user_data['custom_css_url'] }}"
+                           target="_blank" style="font-size:.875rem;padding:9px 16px;">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        {% endif %}
+                        <label for="css-file-input" class="button upload-pic-btn" style="font-size:.875rem;padding:9px 16px;">
+                            <i class="fas fa-upload"></i> Upload .css
+                        </label>
+                        <input type="file" id="css-file-input" accept=".css,text/css" style="display:none;">
+                        <button class="button remove-pic-btn" id="remove-css-btn"
+                                {% if not user_data.get('custom_css_url') %}disabled{% endif %}
+                                style="font-size:.875rem;padding:9px 16px;">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+                <p id="css-upload-status" style="margin-top:10px;font-size:.875rem;display:none;"></p>
+                <p class="section-desc" style="margin-top:12px;">
+                    <i class="fas fa-info-circle"></i>
+                    Max 200 KB. Your CSS is applied on top of the base styles — use CSS variables
+                    like <code style="background:var(--light-gray);padding:1px 5px;border-radius:3px;">--primary</code>,
+                    <code style="background:var(--light-gray);padding:1px 5px;border-radius:3px;">--darker</code>, etc.
+                    for best results.
+                </p>
+            </div>
+
+            <p id="theme-status" style="margin-top:12px;font-size:.875rem;display:none;"></p>
+        </div>
+
         <!-- ── Message Edit Sound ────────────────────────────────── -->
         <div class="section">
             <h3><i class="fas fa-music"></i> Message Sound</h3>
@@ -215,6 +346,160 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
 .sound-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .sound-actions .button { margin:0; padding:9px 16px; font-size:.875rem; }
 
+/* ── Theme Picker ─────────────────────────────────────────── */
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.theme-card {
+    position: relative;
+    background: var(--light-gray);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+    text-align: left;
+    overflow: hidden;
+    outline: none;
+}
+.theme-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,.25);
+}
+.theme-card:focus-visible {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(76,201,240,.35);
+}
+.theme-card.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(76,201,240,.25);
+}
+
+/* Check badge */
+.theme-check {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    background: var(--primary);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: .65rem;
+    color: var(--darker);
+    font-weight: 700;
+}
+.theme-card.active .theme-check { display: flex; }
+
+/* Mini preview thumbnails */
+.theme-preview {
+    width: 100%;
+    height: 80px;
+    display: flex;
+    overflow: hidden;
+    border-radius: 10px 10px 0 0;
+    position: relative;
+}
+.tp-sidebar {
+    width: 32%;
+    height: 100%;
+    flex-shrink: 0;
+}
+.tp-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 6px;
+    gap: 4px;
+}
+.tp-bubble {
+    height: 10px;
+    border-radius: 6px;
+}
+.tp-sent  { width: 65%; align-self: flex-end; }
+.tp-recv  { width: 50%; align-self: flex-start; }
+
+/* Kryonix preview */
+.kryonix-preview {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #0d0d1a);
+}
+.kryonix-preview .tp-sidebar  { background: rgba(18,18,28,.9); }
+.kryonix-preview .tp-chat     { background: rgba(10,10,20,.7); }
+.kryonix-preview .tp-sent     { background: rgba(30,40,70,.9); }
+.kryonix-preview .tp-recv     { background: rgba(25,25,35,.85); border:1px solid #333344; }
+
+/* Dark preview */
+.dark-preview {
+    background: linear-gradient(160deg, #0f172a, #1e293b);
+}
+.dark-preview .tp-sidebar  { background: rgba(15,23,42,.95); }
+.dark-preview .tp-chat     { background: #0f172a; }
+.dark-preview .tp-sent     { background: rgba(37,99,235,.3); }
+.dark-preview .tp-recv     { background: #1e293b; border:1px solid #334155; }
+
+/* Light preview */
+.light-preview {
+    background: #f8fafc;
+}
+.light-preview .tp-sidebar  { background: #fff; border-right:1px solid #e2e8f0; }
+.light-preview .tp-chat     { background: #f1f5f9; }
+.light-preview .tp-sent     { background: rgba(37,99,235,.15); }
+.light-preview .tp-recv     { background: #fff; border:1px solid #e2e8f0; }
+
+/* Custom preview */
+.custom-preview {
+    background: linear-gradient(135deg, #1a0a3c, #2a1060);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+.tp-custom-icon {
+    font-size: 2rem;
+    color: rgba(255,255,255,.35);
+}
+.theme-card.active .custom-preview .tp-custom-icon { color: var(--primary); }
+
+/* Theme label */
+.theme-label {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.theme-name {
+    font-weight: 600;
+    font-size: .9rem;
+    color: var(--light);
+}
+.theme-desc {
+    font-size: .75rem;
+    color: var(--gray);
+}
+
+/* Custom CSS panel */
+.custom-css-panel {
+    background: var(--light-gray);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 4px;
+}
+
+@media (max-width: 480px) {
+    .theme-grid { grid-template-columns: 1fr 1fr; }
+    .theme-preview { height: 64px; }
+}
+
+/* ── End Theme Picker ─────────────────────────────────────── */
+
 @media (max-width: 768px) {
     .profile-picture-section { flex-direction:column; align-items:flex-start; }
     .profile-pic-actions { width:100%; }
@@ -230,6 +515,17 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
 <script>
 (function () {
     'use strict';
+
+    /* ── Helpers ───────────────────────────────────────────── */
+    var csrfToken = document.querySelector('meta[name="csrf-token"]')
+                             .getAttribute('content');
+
+    async function apiFetch(url, opts) {
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        opts.headers['X-CSRFToken'] = csrfToken;
+        return fetch(url, opts);
+    }
 
     /* ── Profile picture ───────────────────────────────────── */
     var profilePicInput = document.getElementById('profile-pic-input');
@@ -253,7 +549,7 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
         var fd = new FormData();
         fd.append('file', file);
         try {
-            var resp = await fetch('/upload_profile_picture', { method:'POST', body:fd });
+            var resp = await apiFetch('/upload_profile_picture', { method:'POST', body:fd });
             var data = await resp.json();
             if (data.error) { setPicStatus('Upload failed: ' + data.error, true); return; }
             var img = document.createElement('img');
@@ -269,7 +565,7 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
         if (!confirm('Remove your profile picture?')) return;
         setPicStatus('Removing…', false);
         try {
-            var resp = await fetch('/upload_profile_picture', {
+            var resp = await apiFetch('/upload_profile_picture', {
                 method:'POST', headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({remove:true})
             });
@@ -287,10 +583,155 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
         } catch(err) { setPicStatus('Failed to remove profile picture.', true); }
     });
 
+    /* ── Theme picker ──────────────────────────────────────── */
+    var themeCards      = document.querySelectorAll('.theme-card');
+    var customPanel     = document.getElementById('custom-css-panel');
+    var themeStatus     = document.getElementById('theme-status');
+
+    // Map theme key → CDN/static URL (adjust paths to match your Flask static setup)
+    var THEME_URLS = {
+        'kryonix': null,                                          // no extra file
+        'dark':    "{{ url_for('static', filename='css/theme-dark.css') }}",
+        'light':   "{{ url_for('static', filename='css/theme-light.css') }}"
+    };
+
+    function setThemeStatus(msg, isError) {
+        themeStatus.textContent   = msg;
+        themeStatus.style.display = msg ? 'block' : 'none';
+        themeStatus.style.color   = isError ? 'var(--danger)' : 'var(--success)';
+    }
+
+    function applyThemeLink(url) {
+        var existing = document.getElementById('user-custom-css');
+        if (url) {
+            if (existing) {
+                existing.href = url;
+            } else {
+                var link = document.createElement('link');
+                link.rel = 'stylesheet'; link.id = 'user-custom-css'; link.href = url;
+                document.head.appendChild(link);
+            }
+        } else {
+            if (existing) existing.remove();
+        }
+    }
+
+    themeCards.forEach(function(card) {
+        card.addEventListener('click', async function() {
+            var theme = card.dataset.theme;
+
+            // Toggle custom panel
+            customPanel.style.display = (theme === 'custom') ? 'block' : 'none';
+
+            if (theme === 'custom') {
+                // Just show the panel; actual apply happens after CSS upload
+                // If there's already a custom CSS saved, mark it active now
+                themeCards.forEach(function(c){ c.classList.remove('active'); });
+                card.classList.add('active');
+                return;
+            }
+
+            // Mark UI
+            themeCards.forEach(function(c){ c.classList.remove('active'); });
+            card.classList.add('active');
+
+            // Apply theme link immediately for instant preview
+            applyThemeLink(THEME_URLS[theme] || null);
+            setThemeStatus('Applying…', false);
+
+            // Persist to server
+            try {
+                var resp = await apiFetch('/settings/theme', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ theme: theme })
+                });
+                var data = await resp.json();
+                if (data.error) { setThemeStatus('Failed: ' + data.error, true); return; }
+                setThemeStatus('Theme saved!', false);
+                setTimeout(function(){ themeStatus.style.display='none'; }, 2000);
+            } catch(err) {
+                setThemeStatus('Could not save theme.', true);
+            }
+        });
+    });
+
+    /* ── Custom CSS upload ─────────────────────────────────── */
+    var cssInput    = document.getElementById('css-file-input');
+    var removeCssBtn= document.getElementById('remove-css-btn');
+    var cssLabel    = document.getElementById('css-file-label');
+    var cssStatus   = document.getElementById('css-upload-status');
+
+    function setCssStatus(msg, isError) {
+        cssStatus.textContent   = msg;
+        cssStatus.style.display = msg ? 'block' : 'none';
+        cssStatus.style.color   = isError ? 'var(--danger)' : 'var(--success)';
+    }
+
+    cssInput.addEventListener('change', async function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var ext = file.name.split('.').pop().toLowerCase();
+        if (ext !== 'css') { setCssStatus('Only .css files are allowed.', true); return; }
+        if (file.size > 200 * 1024) { setCssStatus('File too large. Max 200 KB.', true); return; }
+
+        setCssStatus('Uploading…', false);
+        var fd = new FormData();
+        fd.append('file', file);
+        try {
+            var resp = await apiFetch('/upload_custom_css', { method:'POST', body:fd });
+            var data = await resp.json();
+            if (data.error) { setCssStatus('Upload failed: ' + data.error, true); return; }
+
+            setCssStatus('Custom stylesheet applied!', false);
+            removeCssBtn.disabled = false;
+            cssLabel.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i> Custom stylesheet active';
+
+            // Apply immediately
+            applyThemeLink(data.url);
+
+            // Mark custom card active + persist theme = custom
+            themeCards.forEach(function(c){ c.classList.remove('active'); });
+            document.getElementById('custom-theme-card').classList.add('active');
+
+            await apiFetch('/settings/theme', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ theme:'custom' })
+            });
+        } catch(err) { setCssStatus('Failed to upload stylesheet.', true); }
+    });
+
+    removeCssBtn.addEventListener('click', async function() {
+        if (!confirm('Remove your custom stylesheet?')) return;
+        setCssStatus('Removing…', false);
+        try {
+            var resp = await apiFetch('/upload_custom_css', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ remove: true })
+            });
+            var data = await resp.json();
+            if (data.error) { setCssStatus('Failed: ' + data.error, true); return; }
+            setCssStatus('Custom stylesheet removed.', false);
+            removeCssBtn.disabled = true;
+            cssLabel.innerHTML = '<i class="fas fa-file-code" style="opacity:.4;"></i> No custom stylesheet uploaded';
+            applyThemeLink(null);
+            // Revert to kryonix
+            themeCards.forEach(function(c){ c.classList.remove('active'); });
+            document.querySelector('[data-theme="kryonix"]').classList.add('active');
+            customPanel.style.display = 'none';
+            await apiFetch('/settings/theme', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ theme:'kryonix' })
+            });
+        } catch(err) { setCssStatus('Failed to remove stylesheet.', true); }
+    });
+
     /* ── Generic sound uploader ────────────────────────────── */
     var previewPlayer = document.getElementById('sound-preview-player');
 
-    // Preview buttons (may not exist if no custom sound)
     document.querySelectorAll('.sound-preview-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var src = btn.dataset.src;
@@ -301,7 +742,6 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
     });
 
     function makeSoundHandler(opts) {
-        // opts: { inputId, removeBtnId, statusId, labelId, uploadType, maxBytes, maxLabel }
         var input     = document.getElementById(opts.inputId);
         var removeBtn = document.getElementById(opts.removeBtnId);
         var statusEl  = document.getElementById(opts.statusId);
@@ -336,13 +776,12 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
             var fd = new FormData();
             fd.append('file', file);
             try {
-                var resp = await fetch('/upload_sound/' + opts.uploadType, { method:'POST', body:fd });
+                var resp = await apiFetch('/upload_sound/' + opts.uploadType, { method:'POST', body:fd });
                 var data = await resp.json();
                 if (data.error) { setStatus('Upload failed: ' + data.error, true); return; }
                 setStatus('Sound updated!', false);
                 removeBtn.disabled = false;
                 updateLabel(true);
-                // Update preview button
                 var existingPreview = labelEl.parentNode.querySelector('.sound-preview-btn');
                 if (existingPreview) {
                     existingPreview.dataset.src = data.url;
@@ -364,7 +803,7 @@ body { overflow-y:auto; height:auto; min-height:100dvh; }
             if (!confirm('Remove your custom sound?')) return;
             setStatus('Removing…', false);
             try {
-                var resp = await fetch('/upload_sound/' + opts.uploadType, {
+                var resp = await apiFetch('/upload_sound/' + opts.uploadType, {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({remove:true})
                 });
