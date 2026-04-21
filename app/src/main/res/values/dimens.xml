@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="margin_small">8dp</dimen>
+    <dimen name="margin_medium">16dp</dimen>
+    <dimen name="margin_large">24dp</dimen>
+    <dimen name="avatar_size">44dp</dimen>
+    <dimen name="avatar_size_small">32dp</dimen>
+    <dimen name="bubble_max_width_fraction">0.72</dimen>
+    <dimen name="input_height">52dp</dimen>
+    <dimen name="toolbar_height">56dp</dimen>
+    <dimen name="contact_item_height">72dp</dimen>
+    <dimen name="text_body">14sp</dimen>
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_title">18sp</dimen>
+</resources>

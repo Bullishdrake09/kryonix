@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Kryonix" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:windowBackground">@color/primary</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:navigationBarColor">@color/primary_dark</item>
+        <item name="android:textColorPrimary">@color/on_surface</item>
+        <item name="android:textColorSecondary">@color/on_surface_variant</item>
+    </style>
+
+    <style name="Theme.Kryonix.Splash" parent="Theme.Kryonix">
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <!-- EditText style -->
+    <style name="KryonixEditText" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/accent</item>
+        <item name="hintTextColor">@color/on_surface_variant</item>
+        <item name="android:textColorHint">@color/on_surface_variant</item>
+    </style>
+
+    <!-- Primary button -->
+    <style name="KryonixButton" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/accent</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <!-- Message bubble -->
+    <style name="BubbleOutgoing">
+        <item name="android:background">@drawable/bubble_outgoing</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:padding">10dp</item>
+    </style>
+
+    <style name="BubbleIncoming">
+        <item name="android:background">@drawable/bubble_incoming</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:padding">10dp</item>
+    </style>
+
+</resources>

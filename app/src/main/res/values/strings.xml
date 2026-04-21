@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kryonix</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="username">Username</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="send">Send</string>
+    <string name="loading">Loading…</string>
+    <string name="error_network">Network error. Check your connection.</string>
+    <string name="channel_messages_name">Messages</string>
+    <string name="channel_messages_desc">Incoming chat messages</string>
+    <string name="channel_calls_name">Calls</string>
+    <string name="channel_calls_desc">Incoming voice/video calls</string>
+</resources>

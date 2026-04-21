@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#0f0f0f</color>
+    <color name="primary_dark">#080808</color>
+    <color name="accent">#ff3f81</color>
+    <color name="accent_dark">#c0226a</color>
+    <color name="surface">#181818</color>
+    <color name="surface_variant">#222222</color>
+    <color name="on_surface">#ffffff</color>
+    <color name="on_surface_variant">#aaaaaa</color>
+    <color name="error">#ff5252</color>
+    <color name="success">#4caf50</color>
+    <color name="divider">#2a2a2a</color>
+    <color name="bubble_outgoing">#ff3f81</color>
+    <color name="bubble_incoming">#222222</color>
+    <color name="online_indicator">#4caf50</color>
+    <color name="offline_indicator">#555555</color>
+    <color name="white">#ffffff</color>
+    <color name="transparent">#00000000</color>
+</resources>

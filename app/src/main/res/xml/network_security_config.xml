@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">your-kryonix-domain.com</domain>
+    </domain-config>
+    <!-- Remove this block in production — only needed for local dev over HTTP -->
+    <!--
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.1.100</domain>
+    </domain-config>
+    -->
+</network-security-config>
