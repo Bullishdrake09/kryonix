@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "709927758975",
+    "project_id": "kryonix-a5206",
+    "storage_bucket": "kryonix-a5206.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:709927758975:android:dd6b1cd6ffa318dfd6234a",
+        "android_client_info": {
+          "package_name": "com.kryonix.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEkwLJHM9nibIfwUnFevH5CvHmj54XcIU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
