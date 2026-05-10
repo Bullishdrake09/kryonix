@@ -45,15 +45,65 @@
             <p class="section-desc">Choose a built-in theme or upload your own CSS file.</p>
             <div class="theme-grid" id="theme-grid">
                 <button class="theme-card <%= !session.activeTheme || session.activeTheme === 'kryonix' ? 'active' : '' %>" data-theme="kryonix" type="button">
+                    <div class="theme-preview">
+                        <div class="theme-preview-header">
+                            <div class="theme-preview-line short"></div>
+                            <div class="theme-preview-line short"></div>
+                        </div>
+                        <div class="theme-preview-sidebar">
+                            <div class="theme-preview-sidebar-item">
+                                <div class="theme-preview-line long"></div>
+                                <div class="theme-preview-line short"></div>
+                            </div>
+                            <div class="theme-preview-sidebar-item">
+                                <div class="theme-preview-line long"></div>
+                                <div class="theme-preview-line short"></div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="theme-label"><span class="theme-name">Kryonix</span><span class="theme-desc">Default — deep space</span></div>
                 </button>
                 <button class="theme-card <%= session.activeTheme === 'dark' ? 'active' : '' %>" data-theme="dark" type="button">
+                    <div class="theme-preview">
+                        <div class="theme-preview-header">
+                            <div class="theme-preview-line short"></div>
+                            <div class="theme-preview-line short"></div>
+                        </div>
+                        <div class="theme-preview-sidebar">
+                            <div class="theme-preview-sidebar-item">
+                                <div class="theme-preview-line long"></div>
+                                <div class="theme-preview-line short"></div>
+                            </div>
+                            <div class="theme-preview-sidebar-item">
+                                <div class="theme-preview-line long"></div>
+                                <div class="theme-preview-line short"></div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="theme-label"><span class="theme-name">Dark</span><span class="theme-desc">Charcoal & blue</span></div>
                 </button>
                 <button class="theme-card <%= session.activeTheme === 'light' ? 'active' : '' %>" data-theme="light" type="button">
+                    <div class="theme-preview">
+                        <div class="theme-preview-header">
+                            <div class="theme-preview-line short"></div>
+                            <div class="theme-preview-line short"></div>
+                        </div>
+                        <div class="theme-preview-sidebar">
+                            <div class="theme-preview-sidebar-item">
+                                <div class="theme-preview-line long"></div>
+                                <div class="theme-preview-line short"></div>
+                            </div>
+                            <div class="theme-preview-sidebar-item">
+                                <div class="theme-preview-line long"></div>
+                                <div class="theme-preview-line short"></div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="theme-label"><span class="theme-name">Light</span><span class="theme-desc">Clean & airy</span></div>
                 </button>
                 <button class="theme-card <%= session.activeTheme === 'custom' ? 'active' : '' %>" data-theme="custom" type="button" id="custom-theme-card">
+                    <div class="theme-preview">
+                    </div>
                     <div class="theme-label"><span class="theme-name">Custom CSS</span><span class="theme-desc"><%= user_data.custom_css_url ? '<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Active</span>' : 'Upload your own' %></span></div>
                 </button>
             </div>

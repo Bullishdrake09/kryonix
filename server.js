@@ -1063,7 +1063,16 @@ app.post('/friends', isAuthenticated, async (req, res) => {
                     message_type = "success";
                 }
             } else if (action === 'accept_request') {
-                // Accept logic
+                // Accept logic: Add to friends list for both users and remove request
+                if (!user.friends.includes(target_username)) {
+                    user.friends = [...(user.friends || []), target_username];
+                }
+                if (!target.friends.includes(req.session.username)) {
+                    target.friends = [...(target.friends || []), req.session.username];
+                }
+                user.requests = (user.requests || []).filter(r => r !== target_username);
+                await user.save();
+                await target.save();
                 message = `Accepted friend request from '${target_username}'.`;
                 message_type = "success";
             } else if (action === 'decline_request') {
