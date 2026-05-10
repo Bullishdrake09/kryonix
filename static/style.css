@@ -23,11 +23,16 @@
     --sidebar-width: 280px;
     --header-height: 60px;
     --input-height: 56px;
+    /* Theme variables - updated by JS */
+    --bg-color: #1a1a2e;
+    --sidebar-bg: #16213e;
+    --main-text: #e0e0e0;
+    --accent-color: #4a90e2;
 }
 
 body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    color: var(--light);
+    color: var(--main-text);
     height: 100dvh; /* Changed from 100vh to 100dvh for mobile */
     overflow: hidden;
     display: flex;
@@ -93,7 +98,7 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: var(--sidebar-width);
-    background: rgba(18, 18, 28, 0.85);
+    background: var(--sidebar-bg);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -102,7 +107,7 @@ body {
     position: relative;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    color: var(--light);
+    color: var(--main-text);
 }
 
 .sidebar.active {
@@ -251,6 +256,7 @@ nav a:hover, nav a:focus {
     position: relative;
     min-height: 0;
     transition: padding-bottom 0.3s ease;
+    background: var(--bg-color);
 }
 /* Ensure the input area stays visible on mobile */
 @media (max-width: 768px) {
@@ -582,12 +588,12 @@ nav a:hover, nav a:focus {
 }
 
 .mobile-panel {
-    background: rgba(18, 18, 28, 0.85);
+    background: var(--sidebar-bg);
     border-radius: 12px;
     border: 1px solid var(--border);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    color: var(--light);
+    color: var(--main-text);
 }
 
 .mobile-page-header {

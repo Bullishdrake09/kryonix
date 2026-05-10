@@ -125,7 +125,7 @@
                 
                 <% if (friends_list && friends_list.length > 0) { %>
                 <% friends_list.forEach(function(friend) { %>
-                <li data-room-id="<%= friend %>" data-room-type="direct" data-room-name="<%= friend %>">
+                <li data-friend-username="<%= friend %>" data-room-type="direct" data-room-name="<%= friend %>">
                     <div class="contact-info">
                         <div class="friend-avatar"><%= friend[0].toUpperCase() %></div>
                         <div class="contact-details">
