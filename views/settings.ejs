@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — Kryonix</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="container mobile-app-layout">
+    <div class="main-content mobile-panel" style="overflow-y:auto;">
+        <div class="mobile-page-header">
+            <a href="/chat" class="back-button"><i class="fas fa-arrow-left"></i> Back</a>
+            <h3 class="page-title">Settings</h3>
+            <span aria-hidden="true" style="width:4rem;"></span>
+        </div>
+
+        <% if (message) { %>
+        <div class="alert alert-<%= message_type %>" role="alert" style="margin:16px 24px 0;"><%= message %></div>
+        <% } %>
+
+        <!-- Profile Picture -->
+        <div class="section">
+            <h3><i class="fas fa-camera"></i> Profile Picture</h3>
+            <div class="profile-picture-section">
+                <div class="current-profile-pic">
+                    <% if (user_data.profile_picture) { %>
+                    <img src="<%= user_data.profile_picture %>" alt="Profile picture" id="profile-preview">
+                    <% } else { %>
+                    <div class="default-avatar" id="profile-preview"><%= user_data.username[0].toUpperCase() %></div>
+                    <% } %>
+                </div>
+                <div class="profile-pic-actions">
+                    <label for="profile-pic-input" class="button upload-pic-btn"><i class="fas fa-upload"></i> Upload Picture</label>
+                    <input type="file" id="profile-pic-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;">
+                    <button class="button remove-pic-btn" id="remove-pic-btn" <%= !user_data.profile_picture ? 'disabled' : '' %>><i class="fas fa-trash"></i> Remove</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="section">
+            <h3><i class="fas fa-palette"></i> Appearance</h3>
+            <p class="section-desc">Choose a built-in theme or upload your own CSS file.</p>
+            <div class="theme-grid" id="theme-grid">
+                <button class="theme-card <%= !session.activeTheme || session.activeTheme === 'kryonix' ? 'active' : '' %>" data-theme="kryonix" type="button">
+                    <div class="theme-label"><span class="theme-name">Kryonix</span><span class="theme-desc">Default — deep space</span></div>
+                </button>
+                <button class="theme-card <%= session.activeTheme === 'dark' ? 'active' : '' %>" data-theme="dark" type="button">
+                    <div class="theme-label"><span class="theme-name">Dark</span><span class="theme-desc">Charcoal & blue</span></div>
+                </button>
+                <button class="theme-card <%= session.activeTheme === 'light' ? 'active' : '' %>" data-theme="light" type="button">
+                    <div class="theme-label"><span class="theme-name">Light</span><span class="theme-desc">Clean & airy</span></div>
+                </button>
+                <button class="theme-card <%= session.activeTheme === 'custom' ? 'active' : '' %>" data-theme="custom" type="button" id="custom-theme-card">
+                    <div class="theme-label"><span class="theme-name">Custom CSS</span><span class="theme-desc"><%= user_data.custom_css_url ? '<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Active</span>' : 'Upload your own' %></span></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Account Settings -->
+        <div class="section">
+            <h3><i class="fas fa-user-cog"></i> Account Settings</h3>
+            <form action="/settings" method="POST">
+                <input type="hidden" name="section" value="account">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="<%= user_data.username %>" placeholder="New username">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="<%= user_data.email %>" placeholder="New email">
+                </div>
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" placeholder="Current password">
+                </div>
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" placeholder="New password">
+                </div>
+                <button type="submit" class="button">Save Changes</button>
+            </form>
+        </div>
+
+        <a href="/logout" class="button danger-button" style="margin-top:20px;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+</div>
+<script src="/js/settings.js"></script>
+</body>
+</html>

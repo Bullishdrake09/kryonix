@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends — Kryonix</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="container mobile-app-layout">
+    <div class="main-content mobile-panel">
+        <div class="mobile-page-header">
+            <a href="/chat" class="back-button"><i class="fas fa-arrow-left"></i> Back</a>
+            <h3 class="page-title">Friends</h3>
+            <span aria-hidden="true" style="width:4rem;"></span>
+        </div>
+
+        <% if (message) { %>
+        <div class="friends-message-container <%= message_type === 'success' ? 'success' : 'error' %>" role="alert">
+            <p><%= message %></p>
+        </div>
+        <% } %>
+
+        <!-- Send Friend Request -->
+        <div class="section">
+            <h3><i class="fas fa-user-plus"></i> Send Friend Request</h3>
+            <form action="/friends" method="POST" class="friends-section">
+                <input type="hidden" name="action" value="send_request">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="send-request-input" name="target_username" placeholder="Enter username" autocomplete="off" required style="flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:24px;background:var(--darker);color:var(--light);font-size:1rem;outline:none;min-width:180px;">
+                    <button type="submit" class="button"><i class="fas fa-paper-plane"></i> Send</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Pending Requests -->
+        <div class="section">
+            <h3><i class="fas fa-clock"></i> Pending Requests
+                <% if (user_data.requests && user_data.requests.length > 0) { %>
+                <span style="background:var(--primary);color:var(--darker);font-size:.75rem;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:600;"><%= user_data.requests.length %></span>
+                <% } %>
+            </h3>
+            <% if (user_data.requests && user_data.requests.length > 0) { %>
+            <ul style="list-style:none;padding:0;">
+                <% user_data.requests.forEach(function(req_user) { %>
+                <li style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--light-gray);">
+                    <span><i class="fas fa-user" style="color:var(--primary);margin-right:8px;"></i> <%= req_user %></span>
+                    <div style="display:flex;gap:8px;">
+                        <form action="/friends" method="POST" style="display:inline;">
+                            <input type="hidden" name="action" value="accept_request">
+                            <input type="hidden" name="target_username" value="<%= req_user %>">
+                            <button type="submit" class="friends-small-button accept"><i class="fas fa-check"></i> Accept</button>
+                        </form>
+                        <form action="/friends" method="POST" style="display:inline;">
+                            <input type="hidden" name="action" value="decline_request">
+                            <input type="hidden" name="target_username" value="<%= req_user %>">
+                            <button type="submit" class="friends-small-button decline"><i class="fas fa-times"></i> Decline</button>
+                        </form>
+                    </div>
+                </li>
+                <% }); %>
+            </ul>
+            <% } else { %>
+            <p style="opacity:0.6;">No pending requests.</p>
+            <% } %>
+        </div>
+
+        <!-- Friends List -->
+        <div class="section">
+            <h3><i class="fas fa-users"></i> Friends</h3>
+            <% if (user_data.friends && user_data.friends.length > 0) { %>
+            <ul style="list-style:none;padding:0;">
+                <% user_data.friends.forEach(function(friend) { %>
+                <li style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--light-gray);">
+                    <span><i class="fas fa-user-friend" style="color:var(--primary);margin-right:8px;"></i> <%= friend %></span>
+                    <div style="display:flex;gap:8px;">
+                        <a href="/chat?friend=<%= friend %>" class="friends-small-button"><i class="fas fa-comment"></i> Chat</a>
+                        <form action="/friends" method="POST" style="display:inline;">
+                            <input type="hidden" name="action" value="remove_friend">
+                            <input type="hidden" name="target_username" value="<%= friend %>">
+                            <button type="submit" class="friends-small-button danger"><i class="fas fa-user-minus"></i> Remove</button>
+                        </form>
+                        <form action="/friends" method="POST" style="display:inline;">
+                            <input type="hidden" name="action" value="block_user">
+                            <input type="hidden" name="target_username" value="<%= friend %>">
+                            <button type="submit" class="friends-small-button danger"><i class="fas fa-ban"></i> Block</button>
+                        </form>
+                    </div>
+                </li>
+                <% }); %>
+            </ul>
+            <% } else { %>
+            <p style="opacity:0.6;">No friends yet.</p>
+            <% } %>
+        </div>
+
+        <!-- Blocked Users -->
+        <div class="section">
+            <h3><i class="fas fa-ban"></i> Blocked Users</h3>
+            <% if (user_data.blocked && user_data.blocked.length > 0) { %>
+            <ul style="list-style:none;padding:0;">
+                <% user_data.blocked.forEach(function(blocked_user) { %>
+                <li style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--light-gray);">
+                    <span><i class="fas fa-user-slash" style="color:var(--danger);margin-right:8px;"></i> <%= blocked_user %></span>
+                    <form action="/friends" method="POST" style="display:inline;">
+                        <input type="hidden" name="action" value="unblock_user">
+                        <input type="hidden" name="target_username" value="<%= blocked_user %>">
+                        <button type="submit" class="friends-small-button"><i class="fas fa-unlock"></i> Unblock</button>
+                    </form>
+                </li>
+                <% }); %>
+            </ul>
+            <% } else { %>
+            <p style="opacity:0.6;">No blocked users.</p>
+            <% } %>
+        </div>
+    </div>
+</div>
+</body>
+</html>
