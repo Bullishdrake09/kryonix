@@ -1,24 +1,49 @@
 // Settings Page JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Theme selection functionality
+    // --- Theme Logic ---
     const themeCards = document.querySelectorAll('.theme-card');
-    const customThemeCard = document.getElementById('custom-theme-card');
-    
+    const rootStyle = document.documentElement.style;
+
+    // Define theme colors matching CSS variables
+    const themes = {
+        dark: { bg: '#1a1a2e', sidebar: '#16213e', mainText: '#e0e0e0', accent: '#4a90e2' },
+        light: { bg: '#f0f2f5', sidebar: '#ffffff', mainText: '#333333', accent: '#0084ff' },
+        blue: { bg: '#0f172a', sidebar: '#1e293b', mainText: '#e2e8f0', accent: '#38bdf8' },
+        green: { bg: '#064e3b', sidebar: '#065f46', mainText: '#d1fae5', accent: '#34d399' },
+        purple: { bg: '#2e1065', sidebar: '#4c1d95', mainText: '#ede9fe', accent: '#c084fc' }
+    };
+
+    function applyTheme(themeName) {
+        const theme = themes[themeName];
+        if (!theme) return;
+
+        // Apply CSS variables to root
+        rootStyle.setProperty('--bg-color', theme.bg);
+        rootStyle.setProperty('--sidebar-bg', theme.sidebar);
+        rootStyle.setProperty('--main-text', theme.mainText);
+        rootStyle.setProperty('--accent-color', theme.accent);
+        
+        // Save to localStorage for persistence across pages
+        localStorage.setItem('selectedTheme', themeName);
+
+        // Update visual selection state
+        themeCards.forEach(card => {
+            card.classList.remove('active');
+            if (card.getAttribute('data-theme') === themeName) {
+                card.classList.add('active');
+            }
+        });
+    }
+
+    // Add click listeners to theme cards
     themeCards.forEach(card => {
         card.addEventListener('click', function(e) {
             e.preventDefault();
-            
-            // Remove active class from all cards
-            themeCards.forEach(c => c.classList.remove('active'));
-            
-            // Add active class to clicked card
-            this.classList.add('active');
-            
-            // Get the selected theme
             const selectedTheme = this.getAttribute('data-theme');
+            applyTheme(selectedTheme);
             
-            // Store in a hidden input or data attribute for form submission
+            // Also update hidden input for form submission
             let themeInput = document.getElementById('selected-theme-input');
             if (!themeInput) {
                 themeInput = document.createElement('input');
@@ -28,16 +53,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelector('form').appendChild(themeInput);
             }
             themeInput.value = selectedTheme;
-            
-            // Visual feedback - update custom theme card if custom is selected
-            if (selectedTheme === 'custom' && customThemeCard) {
-                const themeDesc = customThemeCard.querySelector('.theme-desc');
-                if (themeDesc) {
-                    themeDesc.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Selected</span>';
-                }
-            }
         });
     });
+
+    // Load saved theme on startup
+    const savedTheme = localStorage.getItem('selectedTheme') || 'dark';
+    applyTheme(savedTheme);
     
     // Profile picture upload preview
     const profilePicInput = document.getElementById('profile-pic-input');
