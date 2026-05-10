@@ -894,6 +894,38 @@ app.post('/create_group', isAuthenticated, async (req, res) => {
     }
 });
 
+// Create group (new endpoint for modal form)
+app.post('/groups', isAuthenticated, async (req, res) => {
+    try {
+        const { name, members } = req.body;
+        if (!name || name.trim().length === 0 || name.length > 50) {
+            return res.json({ error: 'Invalid group name' }).status(400);
+        }
+        if (!members || members.length < 1) {
+            return res.json({ error: 'At least 1 other member is required' }).status(400);
+        }
+        
+        const user = await getUserModel(req.session.username);
+        for (const member of members) {
+            if (!user.friends.includes(member)) {
+                return res.json({ error: `${member} is not your friend` }).status(400);
+            }
+        }
+        
+        const groupId = `group_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+        await GroupChat.create({ id: groupId, name: name.trim(), creator: req.session.username });
+        await GroupMember.create({ groupId, username: req.session.username });
+        for (const member of members) {
+            await GroupMember.create({ groupId, username: member });
+        }
+        
+        res.json({ success: true, group_id: groupId, group_name: name.trim() });
+    } catch (e) {
+        console.error(`Error creating group: ${e}`);
+        res.json({ error: 'Failed to create group' }).status(500);
+    }
+});
+
 // Get group info
 app.get('/get_group_info/:group_id', isAuthenticated, async (req, res) => {
     try {
@@ -1145,13 +1177,20 @@ app.get('/settings', isAuthenticated, async (req, res) => {
 });
 
 app.post('/settings', isAuthenticated, async (req, res) => {
-    const { section, primary_color, accent_color, username: newUsername, email: newEmail, current_password, new_password } = req.body;
+    const { section, primary_color, accent_color, username: newUsername, email: newEmail, current_password, new_password, active_theme } = req.body;
     let message = null, message_type = null;
     
     const user = await getUserModel(req.session.username);
     
-    if (section === 'theme') {
-        if (primary_color && accent_color) {
+    if (section === 'theme' || active_theme) {
+        // Handle theme change
+        if (active_theme && ALLOWED_THEMES.includes(active_theme)) {
+            user.activeTheme = active_theme;
+            await user.save();
+            loadThemeIntoSession(user, req);
+            message = `Theme changed to ${active_theme}!`;
+            message_type = "success";
+        } else if (primary_color && accent_color) {
             if (!/^#[0-9a-fA-F]{6}$/.test(primary_color) || !/^#[0-9a-fA-F]{6}$/.test(accent_color)) {
                 message = "Invalid colour format.";
                 message_type = "error";
