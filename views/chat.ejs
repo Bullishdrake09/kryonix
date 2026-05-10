@@ -61,6 +61,41 @@
             <i class="fas fa-users"></i> Create Group
         </button>
 
+        <!-- Create Group Modal -->
+        <div class="modal-overlay" id="create-group-modal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Create New Group</h3>
+                    <button class="modal-close" id="close-create-group-modal">&times;</button>
+                </div>
+                <form id="create-group-form" action="/groups" method="POST">
+                    <div class="form-group">
+                        <label for="group_name_input">Group Name</label>
+                        <input type="text" id="group_name_input" name="group_name" placeholder="Enter group name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Members</label>
+                        <div class="member-selection" id="member-selection">
+                            <% if (friends_list && friends_list.length > 0) { %>
+                            <% friends_list.forEach(function(friend) { %>
+                            <label class="member-checkbox">
+                                <input type="checkbox" name="members" value="<%= friend %>">
+                                <span><%= friend %></span>
+                            </label>
+                            <% }); %>
+                            <% } else { %>
+                            <p class="no-members-msg">No friends available to add.</p>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" id="cancel-create-group">Cancel</button>
+                        <button type="submit" class="btn-primary">Create Group</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="friends-list">
             <h3>Chats</h3>
             <ul id="friend-list-ul">
@@ -90,9 +125,9 @@
                 
                 <% if (friends_list && friends_list.length > 0) { %>
                 <% friends_list.forEach(function(friend) { %>
-                <li data-friend-username="<%= friend %>" data-room-type="direct">
+                <li data-room-id="<%= friend %>" data-room-type="direct" data-room-name="<%= friend %>">
                     <div class="contact-info">
-                        <div class="friend-avatar"></div>
+                        <div class="friend-avatar"><%= friend[0].toUpperCase() %></div>
                         <div class="contact-details">
                             <div class="contact-name"><%= friend %></div>
                             <div class="last-message-preview" data-contact-id="<%= friend %>"></div>
@@ -104,9 +139,7 @@
             </ul>
         </div>
 
-        <button class="logout-btn" onclick="window.location.href='/logout'">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </button>
+        <a href="/logout" class="button logout-button" style="margin-top:20px;"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 
     <!-- Main chat area -->

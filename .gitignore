@@ -1,43 +1,56 @@
 ```
-# Compressed archives
-*.tar.gz
+# Dependencies
+node_modules/
 
-# Environment files
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
 .env
 .env.local
 *.env.*
 
-# Dependencies
-node_modules/
-.npm/
-.yarn/
-
-# Build artifacts
-dist/
-build/
-target/
-*.min.js
-*.bundle.js
-
-# Logs
-*.log
-
-# Editor/IDE
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Python (if present)
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 .Python
-venv/
-.venv/
+*.so
+
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+htmlcov/
+*.coverage
+
+# IDE specific
+.vs/
+.idea/
+*.swp
+*.swo
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
 ```

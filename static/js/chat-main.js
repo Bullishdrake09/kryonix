@@ -1221,3 +1221,78 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(pollFriendRequests, 30_000);
     loadContactsWithTimestamps();
 });
+
+// ── New Create Group Modal handlers ───────────────────────────────────────────
+const createGroupModal = document.getElementById('create-group-modal');
+const closeCreateGroupModalBtn = document.getElementById('close-create-group-modal');
+const cancelCreateGroupBtn = document.getElementById('cancel-create-group');
+const createGroupFormEl = document.getElementById('create-group-form');
+
+// Update the create group button to use the new modal
+if (createGroupBtn) {
+    createGroupBtn.addEventListener('click', () => {
+        if (createGroupModal) createGroupModal.style.display = 'flex';
+    });
+}
+
+// Close modal handlers
+if (closeCreateGroupModalBtn) {
+    closeCreateGroupModalBtn.addEventListener('click', () => {
+        if (createGroupModal) createGroupModal.style.display = 'none';
+    });
+}
+
+if (cancelCreateGroupBtn) {
+    cancelCreateGroupBtn.addEventListener('click', () => {
+        if (createGroupModal) createGroupModal.style.display = 'none';
+    });
+}
+
+// Close when clicking outside
+if (createGroupModal) {
+    createGroupModal.addEventListener('click', (e) => {
+        if (e.target === createGroupModal) {
+            createGroupModal.style.display = 'none';
+        }
+    });
+}
+
+// Handle form submission
+if (createGroupFormEl) {
+    createGroupFormEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(createGroupFormEl);
+        const name = formData.get('group_name');
+        const members = formData.getAll('members');
+        
+        if (!name || name.trim() === '') {
+            alert('Please enter a group name.');
+            return;
+        }
+        if (!members || members.length === 0) {
+            alert('Please select at least one member.');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.trim(), members })
+            });
+            const data = await response.json();
+            
+            if (data.error) {
+                alert(data.error);
+            } else {
+                if (createGroupModal) createGroupModal.style.display = 'none';
+                createGroupFormEl.reset();
+                // Reload page to show new group
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error('Error creating group:', err);
+            alert('Failed to create group. Please try again.');
+        }
+    });
+}
