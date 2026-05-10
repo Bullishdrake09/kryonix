@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groups — Kryonix</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="container mobile-app-layout">
+    <div class="main-content mobile-panel">
+        <div class="mobile-page-header">
+            <a href="/chat" class="back-button"><i class="fas fa-arrow-left"></i> Back</a>
+            <h3 class="page-title">Groups</h3>
+            <span aria-hidden="true" style="width:4rem;"></span>
+        </div>
+
+        <% if (message) { %>
+        <div class="alert alert-<%= message_type === 'success' ? 'success' : 'error' %>" role="alert" style="margin:16px 24px 0;">
+            <%= message %>
+        </div>
+        <% } %>
+
+        <!-- Create Group -->
+        <div class="section">
+            <h3><i class="fas fa-plus-circle"></i> Create New Group</h3>
+            <form action="/groups" method="POST">
+                <input type="hidden" name="action" value="create_group">
+                <div class="mb-3">
+                    <label for="group_name" class="form-label">Group Name</label>
+                    <input type="text" class="form-control" id="group_name" name="group_name" placeholder="Enter group name" required minlength="3" maxlength="50">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Select Members</label>
+                    <% if (friends_list && friends_list.length > 0) { %>
+                    <div class="row">
+                        <% friends_list.forEach(function(friend) { %>
+                        <div class="col-md-6 col-lg-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="members" value="<%= friend %>" id="friend_<%= loop ? loop.index : Math.random() %>">
+                                <label class="form-check-label" for="friend_<%= loop ? loop.index : Math.random() %>"><i class="fas fa-user"></i> <%= friend %></label>
+                            </div>
+                        </div>
+                        <% }); %>
+                    </div>
+                    <% } else { %>
+                    <p class="text-muted"><i class="fas fa-info-circle"></i> You need to add friends first. Go to the <a href="/friends">Friends page</a>.</p>
+                    <% } %>
+                </div>
+                <button type="submit" class="btn btn-primary" <%= !friends_list || friends_list.length === 0 ? 'disabled' : '' %>><i class="fas fa-plus"></i> Create Group</button>
+            </form>
+        </div>
+
+        <!-- My Groups -->
+        <div class="section">
+            <h3><i class="fas fa-comments"></i> My Groups (<%= user_groups ? user_groups.length : 0 %>)</h3>
+            <% if (user_groups && user_groups.length > 0) { %>
+            <div class="row">
+                <% user_groups.forEach(function(group) { %>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100" style="border:1px solid var(--border-color);background:rgba(30,30,30,.7);">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-users"></i> <%= group.name %></h5>
+                            <p class="card-text">Created by: <%= group.creator %></p>
+                            <p class="card-text"><small class="text-muted">Members: <%= group.members.join(', ') %></small></p>
+                            <a href="/chat?group=<%= group.id %>" class="button"><i class="fas fa-comment"></i> Open Chat</a>
+                            <% if (current_user.username === group.creator) { %>
+                            <form action="/groups" method="POST" style="display:inline; margin-left:10px;">
+                                <input type="hidden" name="action" value="leave_group">
+                                <input type="hidden" name="group_id" value="<%= group.id %>">
+                                <button type="submit" class="button danger-button"><i class="fas fa-trash"></i> Delete</button>
+                            </form>
+                            <% } else { %>
+                            <form action="/groups" method="POST" style="display:inline; margin-left:10px;">
+                                <input type="hidden" name="action" value="leave_group">
+                                <input type="hidden" name="group_id" value="<%= group.id %>">
+                                <button type="submit" class="button"><i class="fas fa-sign-out-alt"></i> Leave</button>
+                            </form>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+            <% } else { %>
+            <p style="opacity:0.6;">You are not in any groups yet.</p>
+            <% } %>
+        </div>
+    </div>
+</div>
+</body>
+</html>

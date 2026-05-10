@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryonix Chat — <%= username %></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/css/chat.css">
+    <link rel="stylesheet" href="/style.css">
+    <% if (session.customCssUrl) { %>
+    <link rel="stylesheet" href="<%= session.customCssUrl %>" id="user-custom-css">
+    <% } %>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+<!-- Notification sound -->
+<audio id="notification-sound" src="/sounds/message.mp3" preload="auto"></audio>
+
+<!-- Mobile header -->
+<div class="mobile-header" id="mobile-header">
+    <button class="menu-toggle" id="menu-toggle" aria-label="Open sidebar">
+        <i class="fas fa-bars"></i>
+    </button>
+    <h2 id="mobile-chat-title">Kryonix Chat</h2>
+    <span aria-hidden="true" style="width:1.5rem;"></span>
+</div>
+
+<div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <button class="close-button" id="close-sidebar-button" aria-label="Close sidebar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="user-info">
+            <div class="avatar">
+                <% if (current_user.profile_picture) { %>
+                <img src="<%= current_user.profile_picture %>" alt="<%= username %>">
+                <% } else { %>
+                <%= username[0].toUpperCase() %>
+                <% } %>
+            </div>
+            <div class="username"><%= username %></div>
+        </div>
+
+        <!-- Contact search -->
+        <div class="search-container">
+            <input type="text" class="search-input" id="contact-search" placeholder="Search contacts…" autocomplete="off">
+        </div>
+
+        <nav aria-label="Main navigation">
+            <a href="/chat">Chats</a>
+            <a href="/friends">Friends</a>
+            <a href="/settings">Settings</a>
+            <% if (username === 'admin') { %>
+            <a href="/admin">Admin Panel</a>
+            <% } %>
+        </nav>
+
+        <button class="create-group-btn" id="create-group-btn">
+            <i class="fas fa-users"></i> Create Group
+        </button>
+
+        <div class="friends-list">
+            <h3>Chats</h3>
+            <ul id="friend-list-ul">
+                <% if (!friends_list || friends_list.length === 0 && (!group_chats || group_chats.length === 0)) { %>
+                <p class="initial-chat-message">Add friends to start chatting</p>
+                <% } %>
+                
+                <% if (group_chats && group_chats.length > 0) { %>
+                <% group_chats.forEach(function(group) { %>
+                <li data-room-id="<%= group.id %>" data-room-type="group" data-room-name="<%= group.name %>">
+                    <div class="contact-info">
+                        <div class="friend-avatar" style="background: var(--primary);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="contact-details">
+                            <div class="contact-name">
+                                <span><%= group.name %>
+                                    <span class="group-indicator">GROUP</span>
+                                </span>
+                            </div>
+                            <div class="last-message-preview" data-contact-id="<%= group.id %>"></div>
+                        </div>
+                    </div>
+                </li>
+                <% }); %>
+                <% } %>
+                
+                <% if (friends_list && friends_list.length > 0) { %>
+                <% friends_list.forEach(function(friend) { %>
+                <li data-friend-username="<%= friend %>" data-room-type="direct">
+                    <div class="contact-info">
+                        <div class="friend-avatar"></div>
+                        <div class="contact-details">
+                            <div class="contact-name"><%= friend %></div>
+                            <div class="last-message-preview" data-contact-id="<%= friend %>"></div>
+                        </div>
+                    </div>
+                </li>
+                <% }); %>
+                <% } %>
+            </ul>
+        </div>
+
+        <button class="logout-btn" onclick="window.location.href='/logout'">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+    </div>
+
+    <!-- Main chat area -->
+    <div class="chat-area" id="chat-area">
+        <div class="chat-header" id="chat-header">
+            <div class="chat-title" id="chat-title">Select a chat</div>
+            <div class="chat-actions" id="chat-actions"></div>
+        </div>
+        
+        <div class="messages-container" id="messages-container">
+            <div class="welcome-message" id="welcome-message">
+                <h2>Welcome to Kryonix Chat!</h2>
+                <p>Select a contact or group from the sidebar to start chatting.</p>
+            </div>
+        </div>
+        
+        <div class="message-input-container" id="message-input-container" style="display:none;">
+            <div class="typing-indicator" id="typing-indicator"></div>
+            <form class="message-form" id="message-form">
+                <input type="text" class="message-input" id="message-input" placeholder="Type a message…" autocomplete="off">
+                <button type="submit" class="send-button"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const currentUser = '<%= username %>';
+const maxMessageLength = <%= max_message_length %>;
+</script>
+<script src="/js/chat-main.js"></script>
+</body>
+</html>
