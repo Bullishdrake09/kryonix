@@ -1,67 +1,43 @@
 ```
-# Dependencies
-node_modules/
+# Compressed archives
+*.tar.gz
 
-# Environment variables
+# Environment files
 .env
 .env.local
-.env.*
+*.env.*
+
+# Dependencies
+node_modules/
+.npm/
+.yarn/
+
+# Build artifacts
+dist/
+build/
+target/
+*.min.js
+*.bundle.js
 
 # Logs
 *.log
 
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
-
-# IDE files
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *.tmp
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# Python cache
+# Python (if present)
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
-
-# Build outputs
-dist/
-build/
-*.egg-info/
-
-# Testing
-.pytest_cache/
-.mypy_cache/
-
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+.Python
+venv/
+.venv/
 ```
