@@ -1,4 +1,4 @@
-/* Base Reset & Variables */
+/* Base Reset & Variables - Elegant Theme */
 * {
     margin: 0;
     padding: 0;
@@ -6,37 +6,82 @@
 }
 
 :root {
-    --primary: #4cc9f0;
-    --primary-dark: #3ab0d6;
-    --secondary: #7209b7;
-    --light: #f8f9fa;
-    --dark: #0d0d1a;
-    --darker: #080810;
-    --gray: #a0a0b0;
-    --light-gray: #2a2a3a;
-    --border: #333344;
-    --success: #4ade80;
-    --danger: #f87171;
-    --message-bg: rgba(18, 18, 28, 0.7);
-    --sent-bg: rgba(30, 40, 70, 0.8);
-    --received-bg: rgba(25, 25, 35, 0.85);
+    /* Light Theme (Default) */
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #3b82f6;
+    --secondary: #7c3aed;
+    --accent: #f59e0b;
+    
+    /* Light theme colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --border-color: #e2e8f0;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    
+    /* Message colors - light theme */
+    --message-bg: #f1f5f9;
+    --sent-bg: #dbeafe;
+    --received-bg: #ffffff;
+    
+    /* Status colors */
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    
+    /* Layout */
     --sidebar-width: 280px;
-    --header-height: 60px;
+    --header-height: 64px;
     --input-height: 56px;
+    
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    --transition-slow: 350ms ease;
+}
+
+/* Dark Elegant Theme */
+[data-theme="dark"] {
+    --primary: #3b82f6;
+    --primary-dark: #2563eb;
+    --primary-light: #60a5fa;
+    --secondary: #8b5cf6;
+    --accent: #fbbf24;
+    
+    /* Dark theme colors */
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --border-color: #334155;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    
+    /* Message colors - dark theme */
+    --message-bg: #1e293b;
+    --sent-bg: #1e3a5f;
+    --received-bg: #334155;
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    color: var(--light);
-    height: 100dvh; /* Changed from 100vh to 100dvh for mobile */
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text-primary);
+    height: 100dvh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e, #0d0d1a, #0f0c29);
-    background-size: 400% 400%;
-    animation: gradientBG 20s ease infinite;
+    background-color: var(--bg-primary);
+    transition: background-color var(--transition-normal), color var(--transition-normal);
     position: relative;
-    /* Add this to prevent zooming on input focus */
     touch-action: manipulation;
 }
 
@@ -56,8 +101,8 @@ body {
 .mobile-header {
     display: none;
     height: var(--header-height);
-    background: rgba(30, 40, 70, 0.9);
-    color: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     padding: 0 16px;
     align-items: center;
     justify-content: space-between;
@@ -66,7 +111,7 @@ body {
     z-index: 100;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .menu-toggle {
@@ -93,8 +138,8 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: var(--sidebar-width);
-    background: rgba(18, 18, 28, 0.85);
-    border-right: 1px solid var(--border);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     transition: transform 0.3s ease;
@@ -102,7 +147,7 @@ body {
     position: relative;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 .sidebar.active {
@@ -117,14 +162,14 @@ body {
     right: 12px;
     background: none;
     border: none;
-    color: var(--gray);
+    color: var(--text-muted);
     font-size: 1.5rem;
     cursor: pointer;
     z-index: 10;
 }
 
 .close-button:hover {
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 /* User Info */
@@ -132,7 +177,7 @@ body {
     padding: 24px 16px 16px;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .avatar {
@@ -140,7 +185,7 @@ body {
     height: 48px;
     border-radius: 50%;
     background: var(--primary);
-    color: var(--darker);
+    color: var(--bg-tertiary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -157,20 +202,20 @@ body {
 /* Navigation */
 nav {
     padding: 16px 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-color);
 }
 
 nav a {
     display: block;
     padding: 12px 24px;
-    color: var(--light);
+    color: var(--text-primary);
     text-decoration: none;
     font-weight: 500;
     transition: background 0.2s;
 }
 
 nav a:hover, nav a:focus {
-    background: var(--light-gray);
+    background: var(--bg-tertiary);
     color: white;
 }
 
@@ -184,7 +229,7 @@ nav a:hover, nav a:focus {
 .friends-list h3 {
     padding: 0 24px 8px;
     font-size: 1rem;
-    color: var(--gray);
+    color: var(--text-muted);
     font-weight: 600;
 }
 
@@ -199,11 +244,11 @@ nav a:hover, nav a:focus {
     padding: 12px 24px;
     cursor: pointer;
     transition: background 0.2s;
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 #friend-list-ul li:hover, #friend-list-ul li.active {
-    background: var(--light-gray);
+    background: var(--bg-tertiary);
 }
 
 .friend-avatar {
@@ -236,7 +281,7 @@ nav a:hover, nav a:focus {
     text-align: center;
     text-decoration: none;
     font-weight: 600;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--border-color);
     transition: background 0.2s;
 }
 
@@ -296,20 +341,20 @@ nav a:hover, nav a:focus {
 }
 
 #overlay-message {
-    background: var(--darker);
-    color: var(--light);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
     padding: 24px;
     border-radius: 8px;
     max-width: 90%;
     text-align: center;
     margin-bottom: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
 }
 
 #status-overlay button {
     background: var(--primary);
-    color: var(--darker);
+    color: var(--bg-tertiary);
     border: none;
     padding: 10px 24px;
     border-radius: 4px;
@@ -324,12 +369,12 @@ nav a:hover, nav a:focus {
     align-items: center;
     padding: 0 16px;
     height: var(--header-height);
-    background: rgba(18, 18, 28, 0.85);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 .chat-header h2 {
@@ -374,7 +419,7 @@ nav a:hover, nav a:focus {
 
 .initial-chat-message {
     text-align: center;
-    color: var(--gray);
+    color: var(--text-muted);
     font-style: italic;
     padding: 32px 16px;
     margin: auto;
@@ -412,7 +457,7 @@ nav a:hover, nav a:focus {
     padding: 12px 16px;
     border-radius: 18px;
     position: relative;
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 .message.sent .message-content {
@@ -423,7 +468,7 @@ nav a:hover, nav a:focus {
 .message.received .message-content {
     background: var(--received-bg);
     border-bottom-left-radius: 4px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
 }
 
 .message-sender {
@@ -442,19 +487,19 @@ nav a:hover, nav a:focus {
     max-width: 100%;
     border-radius: 8px;
     margin-top: 8px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
 }
 
 .message-content video {
     max-width: 100%;
     border-radius: 8px;
     margin-top: 8px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
 }
 
 .message-time {
     font-size: 0.75rem;
-    color: var(--gray);
+    color: var(--text-muted);
     text-align: right;
     margin-top: 4px;
 }
@@ -468,8 +513,8 @@ nav a:hover, nav a:focus {
 
 .message-actions button {
     background: none;
-    border: 1px solid var(--gray);
-    color: var(--gray);
+    border: 1px solid var(--text-muted);
+    color: var(--text-muted);
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.75rem;
@@ -478,7 +523,7 @@ nav a:hover, nav a:focus {
 }
 
 .message-actions button:hover {
-    background: var(--light-gray);
+    background: var(--bg-tertiary);
     color: white;
     border-color: white;
 }
@@ -486,11 +531,11 @@ nav a:hover, nav a:focus {
 .message-edit-input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     font-family: inherit;
     margin-top: 8px;
-    background: var(--darker);
+    background: var(--bg-tertiary);
     color: white;
 }
 
@@ -499,8 +544,8 @@ nav a:hover, nav a:focus {
     display: flex;
     align-items: center;
     padding: 8px 16px;
-    background: rgba(18, 18, 28, 0.85);
-    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
     height: var(--input-height);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -509,11 +554,11 @@ nav a:hover, nav a:focus {
 #message-input {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 24px;
     font-size: 1rem;
     outline: none;
-    background: var(--darker);
+    background: var(--bg-tertiary);
     color: white;
     transition: border-color 0.2s;
 }
@@ -528,7 +573,7 @@ nav a:hover, nav a:focus {
 }
 
 .chat-input-area label {
-    color: var(--gray);
+    color: var(--text-muted);
     margin: 0 12px;
     cursor: pointer;
     font-size: 1.25rem;
@@ -541,7 +586,7 @@ nav a:hover, nav a:focus {
 
 #send-button {
     background: var(--primary);
-    color: var(--darker);
+    color: var(--bg-tertiary);
     border: none;
     width: 44px;
     height: 44px;
@@ -583,12 +628,12 @@ nav a:hover, nav a:focus {
 }
 
 .mobile-panel {
-    background: rgba(18, 18, 28, 0.85);
+    background: var(--bg-secondary);
     border-radius: 12px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 .mobile-page-header {
@@ -596,8 +641,8 @@ nav a:hover, nav a:focus {
     align-items: center;
     justify-content: space-between;
     padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(30, 40, 70, 0.9);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
@@ -611,13 +656,13 @@ nav a:hover, nav a:focus {
     text-decoration: none;
     font-weight: 500;
     padding: 8px 12px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     transition: all 0.2s;
 }
 
 .back-button:hover {
-    background: var(--light-gray);
+    background: var(--bg-tertiary);
     color: white;
 }
 
@@ -629,7 +674,7 @@ nav a:hover, nav a:focus {
 
 .section {
     padding: 24px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .section:last-child {
@@ -658,15 +703,15 @@ nav a:hover, nav a:focus {
 
 .settings-form label {
     font-weight: 500;
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 .settings-form input[type="color"] {
     width: 60px;
     height: 40px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: var(--darker);
+    background: var(--bg-tertiary);
     cursor: pointer;
     padding: 4px;
 }
@@ -682,7 +727,7 @@ nav a:hover, nav a:focus {
 
 .button {
     background: var(--primary);
-    color: var(--darker);
+    color: var(--bg-tertiary);
     border: none;
     padding: 12px 24px;
     border-radius: 6px;
@@ -718,7 +763,7 @@ nav a:hover, nav a:focus {
 
 .alert-success {
     background: var(--success);
-    color: var(--darker);
+    color: var(--bg-tertiary);
 }
 
 .alert-error {
@@ -737,10 +782,10 @@ nav a:hover, nav a:focus {
 .friends-section input[type="text"] {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 24px;
-    background: var(--darker);
-    color: var(--light);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
     font-size: 1rem;
     outline: none;
     min-width: 200px;
@@ -753,7 +798,7 @@ nav a:hover, nav a:focus {
 
 .friends-section button {
     background: var(--primary);
-    color: var(--darker);
+    color: var(--bg-tertiary);
     border: none;
     padding: 12px 24px;
     border-radius: 24px;
@@ -778,7 +823,7 @@ nav a:hover, nav a:focus {
     justify-content: space-between;
     align-items: center;
     padding: 12px 0;
-    border-bottom: 1px solid var(--light-gray);
+    border-bottom: 1px solid var(--bg-tertiary);
 }
 
 .friends-section ul li:last-child {
@@ -805,7 +850,7 @@ nav a:hover, nav a:focus {
 
 .friends-small-button.accept {
     background: var(--success);
-    color: var(--darker);
+    color: var(--bg-tertiary);
 }
 
 .friends-small-button.accept:hover {
@@ -827,7 +872,7 @@ nav a:hover, nav a:focus {
 
 .friends-small-button.unblock {
     background: var(--primary);
-    color: var(--darker);
+    color: var(--bg-tertiary);
 }
 
 .friends-small-button.unblock:hover {
@@ -844,7 +889,7 @@ nav a:hover, nav a:focus {
 
 .friends-message-container.success {
     background: var(--success);
-    color: var(--darker);
+    color: var(--bg-tertiary);
 }
 
 .friends-message-container.error {
@@ -1073,7 +1118,7 @@ nav a:hover, nav a:focus {
     padding: 40px 30px;
     background: rgba(18, 18, 28, 0.85);
     border-radius: 16px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -1088,7 +1133,7 @@ nav a:hover, nav a:focus {
     margin-bottom: 24px;
     font-size: 2rem;
     font-weight: 600;
-    color: var(--light);
+    color: var(--text-primary);
 }
 
 .auth-container form {
@@ -1101,10 +1146,10 @@ nav a:hover, nav a:focus {
 .auth-container input[type="password"] {
     width: 100%;
     padding: 14px 16px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
-    background: var(--darker);
-    color: var(--light);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
     font-size: 1rem;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -1118,7 +1163,7 @@ nav a:hover, nav a:focus {
 
 .auth-container button {
     background: var(--primary);
-    color: var(--darker);
+    color: var(--bg-tertiary);
     border: none;
     padding: 14px;
     border-radius: 12px;
@@ -1135,7 +1180,7 @@ nav a:hover, nav a:focus {
 
 .auth-container p {
     margin-top: 20px;
-    color: var(--gray);
+    color: var(--text-muted);
 }
 
 .auth-container a {
@@ -1146,7 +1191,7 @@ nav a:hover, nav a:focus {
 }
 
 .auth-container a:hover {
-    color: var(--light);
+    color: var(--text-primary);
     text-decoration: underline;
 }
 
@@ -1208,7 +1253,7 @@ body.auth-page {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 2px solid var(--darker);
+    border: 2px solid var(--bg-tertiary);
     transition: all 0.3s ease;
 }
 
@@ -1218,7 +1263,7 @@ body.auth-page {
 }
 
 .status-indicator.offline {
-    background-color: var(--gray);
+    background-color: var(--text-muted);
 }
 
 .status-indicator.typing {
@@ -1253,11 +1298,11 @@ body.auth-page {
     align-items: center;
     gap: 4px;
     padding: 8px 16px;
-    background: var(--light-gray);
+    background: var(--bg-tertiary);
     border-radius: 18px;
     margin: 8px 0;
     font-size: 0.875rem;
-    color: var(--gray);
+    color: var(--text-muted);
 }
 
 .typing-indicator span {
@@ -1306,7 +1351,7 @@ body.auth-page {
         width: 90%;
         max-width: 1200px;
         height: 80vh;
-        background: var(--darker);
+        background: var(--bg-tertiary);
         border-radius: 16px;
         padding: 24px;
         display: flex;
@@ -1322,7 +1367,7 @@ body.auth-page {
     }
     
     .call-header h3 {
-        color: var(--light);
+        color: var(--text-primary);
         font-size: 1.25rem;
     }
     
@@ -1381,7 +1426,7 @@ body.auth-page {
     }
     
     .call-button.mute {
-        background: var(--light-gray);
+        background: var(--bg-tertiary);
         color: white;
     }
     
@@ -1400,7 +1445,7 @@ body.auth-page {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: var(--darker);
+        background: var(--bg-tertiary);
         padding: 32px;
         border-radius: 16px;
         border: 2px solid var(--primary);
@@ -1414,13 +1459,13 @@ body.auth-page {
     }
     
     .incoming-call-modal h3 {
-        color: var(--light);
+        color: var(--text-primary);
         margin-bottom: 16px;
         font-size: 1.5rem;
     }
     
     .incoming-call-modal p {
-        color: var(--gray);
+        color: var(--text-muted);
         margin-bottom: 24px;
     }
     
@@ -1442,7 +1487,7 @@ body.auth-page {
     
     .answer-button {
         background: var(--success);
-        color: var(--darker);
+        color: var(--bg-tertiary);
     }
     
     .reject-button {
@@ -1463,7 +1508,7 @@ body.auth-page {
     
     .call-icon-btn {
         background: var(--primary);
-        color: var(--darker);
+        color: var(--bg-tertiary);
         border: none;
         width: 40px;
         height: 40px;
@@ -1481,7 +1526,7 @@ body.auth-page {
     }
     
     .call-icon-btn:disabled {
-        background: var(--gray);
+        background: var(--text-muted);
         cursor: not-allowed;
         opacity: 0.5;
     }
@@ -1491,8 +1536,8 @@ body.auth-page {
         position: absolute;
         top: 24px;
         right: 70px;
-        background: var(--light-gray);
-        color: var(--light);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
         border: none;
         width: 40px;
         height: 40px;
@@ -1506,7 +1551,7 @@ body.auth-page {
     }
     
     .minimize-call-btn:hover {
-        background: var(--border);
+        background: var(--border-color);
     }
     
     .call-modal.minimized {
@@ -1575,10 +1620,10 @@ body.auth-page {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: var(--darker);
+        background: var(--bg-tertiary);
         padding: 24px;
         border-radius: 16px;
-        border: 2px solid var(--border);
+        border: 2px solid var(--border-color);
         z-index: 1002;
         min-width: 350px;
         max-width: 500px;
@@ -1589,7 +1634,7 @@ body.auth-page {
     }
     
     .device-settings-modal h3 {
-        color: var(--light);
+        color: var(--text-primary);
         margin-bottom: 20px;
         font-size: 1.3rem;
     }
@@ -1600,7 +1645,7 @@ body.auth-page {
     
     .device-setting label {
         display: block;
-        color: var(--gray);
+        color: var(--text-muted);
         margin-bottom: 8px;
         font-size: 0.9rem;
     }
@@ -1608,9 +1653,9 @@ body.auth-page {
     .device-setting select {
         width: 100%;
         padding: 10px;
-        background: var(--light-gray);
-        color: var(--light);
-        border: 1px solid var(--border);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 1rem;
         cursor: pointer;
@@ -1639,12 +1684,12 @@ body.auth-page {
     
     .save-settings-btn {
         background: var(--primary);
-        color: var(--darker);
+        color: var(--bg-tertiary);
     }
     
     .cancel-settings-btn {
-        background: var(--light-gray);
-        color: var(--light);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
     }
     
     .save-settings-btn:hover,
@@ -1657,8 +1702,8 @@ body.auth-page {
         position: absolute;
         top: 24px;
         right: 120px;
-        background: var(--light-gray);
-        color: var(--light);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
         border: none;
         width: 40px;
         height: 40px;
@@ -1672,7 +1717,7 @@ body.auth-page {
     }
     
     .settings-call-btn:hover {
-        background: var(--border);
+        background: var(--border-color);
     }
     
     .call-modal.minimized .settings-call-btn {
