@@ -1,0 +1,42 @@
+# Kryonix — Caddy reverse proxy with auto-HTTPS
+# Replace yourdomain.com with your actual domain
+
+yourdomain.com {
+    # Reverse proxy to Kryonix backend
+    reverse_proxy kryonix:3001 {
+        health_uri     /api/health
+        health_interval 30s
+    }
+
+    # WebSocket support for signaling
+    @ws {
+        header Upgrade websocket
+    }
+    reverse_proxy @ws kryonix:3001
+
+    # Ollama AI gateway (internal only — not exposed publicly)
+    # handle /api/ai/* { reverse_proxy ollama:11434 }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    nosniff
+        X-Frame-Options           DENY
+        Referrer-Policy           strict-origin-when-cross-origin
+        Permissions-Policy        "camera=self, microphone=self"
+    }
+
+    # Gzip compression
+    encode gzip
+
+    # Logging
+    log {
+        output file /var/log/caddy/kryonix.log
+        format json
+    }
+}
+
+# TURN server proxy (if using Caddy for TURNS)
+# turn.yourdomain.com:5349 {
+#     reverse_proxy coturn:5349
+# }

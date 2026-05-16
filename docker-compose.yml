@@ -1,0 +1,116 @@
+# Kryonix — Docker Compose
+# Production-ready stack: Kryonix + PostgreSQL + coturn TURN server + Caddy (TLS)
+version: '3.9'
+
+services:
+  # ── Kryonix Backend ──────────────────────────────────────────
+  kryonix:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kryonix-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV:             production
+      PORT:                 3001
+      DB_HOST:              postgres
+      DB_PORT:              5432
+      DB_NAME:              kryonix
+      DB_USER:              kryonix
+      DB_PASSWORD:          ${DB_PASSWORD}
+      DB_SSL:               false
+      JWT_ACCESS_SECRET:    ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET:   ${JWT_REFRESH_SECRET}
+      OLLAMA_URL:           http://ollama:11434
+      TURN_HOST:            ${TURN_HOST:-turn.yourdomain.com}
+      TURN_SECRET:          ${TURN_SECRET}
+      LOG_LEVEL:            info
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres: { condition: service_healthy }
+      ollama:   { condition: service_started }
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - kryonix-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: kryonix-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       kryonix
+      POSTGRES_USER:     kryonix
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kryonix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kryonix"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── Ollama AI (GPU-optional) ─────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: kryonix-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - kryonix-net
+    # Uncomment for GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ── Caddy (TLS + Reverse Proxy) ──────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: kryonix-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - kryonix-net
+    depends_on:
+      - kryonix
+
+  # ── coturn TURN Server ───────────────────────────────────────
+  coturn:
+    image: coturn/coturn:latest
+    container_name: kryonix-turn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./scripts/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: -c /etc/coturn/turnserver.conf
+
+volumes:
+  postgres_data:
+  ollama_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  kryonix-net:
+    driver: bridge
