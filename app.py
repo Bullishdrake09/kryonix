@@ -487,7 +487,7 @@ def register():
             'requests': [],
             'blocked': [],
             'chat_history': {},
-            'settings': {'primary_color': '#0f0f0f', 'accent_color': '#ff3f81'},
+            'settings': {'theme': 'light'},
             'timeout_until': None,
             'status': 'offline',
             'last_seen': datetime.now().isoformat(),
@@ -529,6 +529,12 @@ def login():
 
         login_user(user)
         update_user_status(user.username, 'online')
+        
+        # Set theme from user settings
+        user_data = load_user_data(user.username)
+        if user_data:
+            session['theme'] = user_data.get('settings', {}).get('theme', 'light')
+        
         flash('Logged in successfully!', 'success')
         return redirect(url_for('chat'))
 
@@ -565,8 +571,7 @@ def chat():
             })
     
     if user_data:
-        session['primary_color'] = user_data['settings'].get('primary_color', '#0f0f0f')
-        session['accent_color'] = user_data['settings'].get('accent_color', '#ff3f81')
+        session['theme'] = user_data.get('settings', {}).get('theme', 'light')
 
     return render_template('chat.html', 
                            username=current_user.username, 
@@ -1119,22 +1124,19 @@ def settings():
         section = request.form.get('section', 'theme')
         
         if section == 'theme':
-            new_primary = request.form.get('primary_color')
-            new_accent = request.form.get('accent_color')
-
-            if new_primary and new_accent:
-                user_data['settings']['primary_color'] = new_primary
-                user_data['settings']['accent_color'] = new_accent
+            new_theme = request.form.get('theme', 'light')
+            
+            if new_theme in ['light', 'dark']:
+                user_data['settings']['theme'] = new_theme
                 if save_user_data(user_data):
-                    session['primary_color'] = new_primary
-                    session['accent_color'] = new_accent
-                    message = "Theme settings updated successfully!"
+                    session['theme'] = new_theme
+                    message = "Theme updated successfully!"
                     message_type = "success"
                 else:
                     message = "Failed to update settings. Please try again."
                     message_type = "error"
             else:
-                message = "Both colors are required."
+                message = "Invalid theme selected."
                 message_type = "error"
         
         elif section == 'account':
@@ -1250,11 +1252,9 @@ def settings():
                         message = "Failed to change password."
                         message_type = "error"
 
-    current_settings = load_user_data(current_user.username).get('settings', {'primary_color': '#0f0f0f', 'accent_color': '#ff3f81'})
     user_data = load_user_data(current_user.username)
     return render_template('settings.html', 
                            current_user=current_user, 
-                           settings=current_settings,
                            user_data=user_data,
                            message=message,
                            message_type=message_type)

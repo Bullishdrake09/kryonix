@@ -16,6 +16,27 @@
         {% if message %}
             <div class="alert alert-{{ message_type }}">{{ message }}</div>
         {% endif %}
+        
+        <!-- Theme Settings Section -->
+        <div class="section">
+            <h3>Appearance</h3>
+            <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="section" value="theme">
+                
+                <div class="form-group">
+                    <label for="theme">Theme:</label>
+                    <select id="theme" name="theme" class="theme-selector">
+                        <option value="light" {% if user_data.settings.get('theme', 'light') == 'light' %}selected{% endif %}>☀️ Light & Clean</option>
+                        <option value="dark" {% if user_data.settings.get('theme', 'light') == 'dark' %}selected{% endif %}>🌙 Dark & Elegant</option>
+                    </select>
+                    <small>Choose your preferred appearance</small>
+                </div>
+                
+                <button type="submit" class="button">Save Theme Settings</button>
+            </form>
+        </div>
+        
         <a href="{{ url_for('chat') }}" class="back-button">< Back</a>
         <!-- Profile Picture Section -->
         <div class="section">
@@ -234,31 +255,33 @@
         display: block;
         margin-bottom: 8px;
         font-weight: 600;
-        color: var(--light);
+        color: var(--text-primary);
     }
     
     .form-group input[type="text"],
     .form-group input[type="password"],
-    .form-group select {
+    .form-group select,
+    .theme-selector {
         width: 100%;
         padding: 12px 16px;
-        border: 1px solid var(--border);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 14px;
-        background: var(--darker);
-        color: var(--light);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
         outline: none;
         transition: border-color 0.2s;
     }
 
-    .form-group input:focus {
+    .form-group input:focus,
+    .theme-selector:focus {
         border-color: var(--primary);
     }
 
     .form-group small {
         display: block;
         margin-top: 4px;
-        color: var(--gray);
+        color: var(--text-muted);
         font-size: 0.85rem;
     }
     
@@ -318,7 +341,7 @@
         justify-content: center;
         font-size: 3rem;
         font-weight: bold;
-        color: var(--light);
+        color: var(--text-primary);
         background: var(--primary);
     }
 
